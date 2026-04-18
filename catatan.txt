@@ -1,0 +1,66 @@
+Roadmap Pengembangan Pabalu
+Fase 1 — Fondasi Data Master
+Harus ada sebelum operasional bisa berjalan. Semua tabel transaksi butuh outlet_id.
+
+#	Fitur	Permission	Keterangan
+1	Kelola Outlet	outlet.*	Outlet adalah root dari semua data
+2	Kelola Kategori	category.*	Dibutuhkan sebelum input produk
+3	Kelola Produk	product.*	Dibutuhkan sebelum stok & transaksi
+Fase 2 — Operasional Harian
+Mengikuti urutan alur bisnis: buka → jual → tambah stok → catat keluar
+
+#	Fitur	Permission	Keterangan
+4	Opening Stok	stock.opening	Input stok awal setiap hari buka
+5	POS / Kasir	transaction.create	Transaksi penjualan, fitur terbesar
+6	Tambah Stok	stock.in	Input produksi/restok harian
+7	Waste / Barang Rusak	stock.waste	Catat barang yang tidak terjual/rusak
+8	Pengeluaran	expense.*	Biaya operasional harian
+9	Closing Harian	closing.create	Rekap & kunci data hari itu
+Fase 3 — Laporan
+Bisa dikerjakan setelah ada data transaksi.
+
+#	Fitur	Permission	Keterangan
+10	Laporan Penjualan	report.outlet/all	Per outlet & semua outlet
+11	Laporan Stok	report.outlet/all	Pergerakan stok, sisa stok
+12	Laporan Laba & Rugi	report.all	Omzet - HPP - pengeluaran
+Yang Dikerjakan Duluan
+→ Mulai dari Outlet, karena:
+
+outlet_id wajib ada di hampir semua tabel
+User perlu di-assign ke outlet tertentu
+Tanpa outlet, Opening Stok dan POS tidak bisa berjalan
+Setelah outlet → Kategori → Produk, baru masuk ke operasional.
+
+
+
+ni yang masih belum dikerjakan:
+
+1. Activity Log belum ada di 4 controller CRUD:
+
+OutletController — store, update, destroy
+ProductController — store, update, destroy
+CategoryController — store, update, destroy
+RoleController — store, update, destroy
+2. Setting::get() belum dipakai di mana pun:
+Setting sudah bisa disimpan tapi nilainya tidak digunakan aplikasi:
+
+Key	Harusnya dipakai di	Kondisi sekarang
+app_name	Layout <title>	Hardcode config('app.name')
+receipt_footer	Struk cetak	Hardcode "Terima kasih telah berbelanja!"
+low_stock_threshold	Dashboard + Stok kritis	Hardcode angka 5
+currency_symbol	Seluruh tampilan harga	Hardcode "Rp"
+3. Riwayat Transaksi tidak ada pagination:
+
+
+Password@92
+
+
+verifikasi email
+Closing bulanan
+Keamanan 
+- XSS (Cross-Site Scripting)
+- DDoS
+- Timezone
+- Hendel error
+
+Versi Mobile
