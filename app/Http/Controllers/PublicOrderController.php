@@ -9,8 +9,10 @@ use App\Models\OwnerSetting;
 use App\Models\Product;
 use App\Models\Setting;
 use App\Models\StockMovement;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class PublicOrderController extends Controller
@@ -97,19 +99,29 @@ class PublicOrderController extends Controller
             && OwnerSetting::get('midtrans_enabled', $ownerId) === '1'
             && OwnerSetting::get('midtrans_server_key', $ownerId);
 
-        $order = Order::create([
-            'outlet_id'      => $outlet->id,
-            'order_number'   => Order::generateNumber($outlet->id),
-            'customer_name'  => $validated['customer_name'],
-            'customer_phone' => $validated['customer_phone'],
-            'catatan'        => $validated['catatan'] ?? null,
-            'subtotal'       => $subtotal,
-            'order_status'   => $usePayment ? 'pending_payment' : 'pending',
-        ]);
-
-        foreach ($orderLines as $line) {
-            $order->items()->create($line);
-        }
+        $attempts = 0;
+        do {
+            try {
+                $order = DB::transaction(function () use ($outlet, $validated, $subtotal, $orderLines, $usePayment) {
+                    $o = Order::create([
+                        'outlet_id'      => $outlet->id,
+                        'order_number'   => Order::generateNumber($outlet->id),
+                        'customer_name'  => $validated['customer_name'],
+                        'customer_phone' => $validated['customer_phone'],
+                        'catatan'        => $validated['catatan'] ?? null,
+                        'subtotal'       => $subtotal,
+                        'order_status'   => $usePayment ? 'pending_payment' : 'pending',
+                    ]);
+                    foreach ($orderLines as $line) {
+                        $o->items()->create($line);
+                    }
+                    return $o;
+                });
+                break;
+            } catch (QueryException $e) {
+                if ($e->getCode() !== '23000' || ++$attempts >= 3) throw $e;
+            }
+        } while (true);
 
         // Buat Snap token jika payment gateway aktif
         if ($usePayment) {

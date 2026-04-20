@@ -352,8 +352,8 @@
       </div>
 
       @php
-        $metodeLabel = ['tunai'=>'Tunai','qris'=>'QRIS','transfer'=>'Transfer Bank'];
-        $metodeIcon  = ['tunai'=>'money-bill-wave','qris'=>'qrcode','transfer'=>'building-columns'];
+        $metodeLabel = ['tunai'=>'Tunai','qris'=>'QRIS','transfer'=>'Transfer Bank','gateway'=>'Payment Gateway'];
+        $metodeIcon  = ['tunai'=>'money-bill-wave','qris'=>'qrcode','transfer'=>'building-columns','gateway'=>'credit-card'];
         $m = $transaction->metode_bayar ?? 'tunai';
       @endphp
       <div class="total-row metode">

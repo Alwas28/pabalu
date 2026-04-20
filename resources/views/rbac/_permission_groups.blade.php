@@ -51,6 +51,9 @@
     'setting.update'      => 'Edit',
     'guide.read'          => 'Lihat',
     'guide.update'        => 'Edit Panduan',
+    'billing.read'        => 'Lihat Tagihan',
+    'billing.manage'      => 'Kelola Tagihan',
+    'api.docs'            => 'Akses Docs API',
   ];
   $existingNames = $allPermissions->pluck('name')->toArray();
 @endphp

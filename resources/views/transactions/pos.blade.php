@@ -267,6 +267,11 @@
             <i class="fa-solid fa-building-columns" style="display:block;font-size:18px;margin-bottom:4px"></i>Transfer
           </button>
           @endif
+          @if(in_array('gateway', $activeMethods))
+          <button type="button" class="pay-tab {{ $firstMethod === 'gateway' ? 'active' : '' }}" id="tab-gateway" onclick="setMetode('gateway')">
+            <i class="fa-solid fa-qrcode" style="display:block;font-size:18px;margin-bottom:4px"></i>QRIS Pay
+          </button>
+          @endif
         </div>
       </div>
 
@@ -348,8 +353,25 @@
         </div>
       </div>
 
+      {{-- Panel: Gateway (QRIS Midtrans) --}}
+      <div id="panel-gateway" style="display:none">
+        <div id="gateway-idle" style="text-align:center;padding:20px 0">
+          <div style="width:56px;height:56px;border-radius:14px;background:var(--ac-lt);color:var(--ac);
+                      display:grid;place-items:center;font-size:24px;margin:0 auto 12px">
+            <i class="fa-solid fa-qrcode"></i>
+          </div>
+          <div style="font-size:13.5px;font-weight:600;color:var(--text);margin-bottom:4px">Bayar via QRIS</div>
+          <div style="font-size:12px;color:var(--muted)">Klik <strong>Konfirmasi</strong> untuk memuat QR pembayaran</div>
+        </div>
+        <div id="gateway-loading" style="display:none;text-align:center;padding:24px 0">
+          <i class="fa-solid fa-spinner fa-spin" style="font-size:28px;color:var(--ac)"></i>
+          <div style="font-size:12px;color:var(--muted);margin-top:10px">Memuat QR pembayaran…</div>
+        </div>
+        <div id="snap-container" style="min-height:200px"></div>
+      </div>
+
       {{-- Keterangan --}}
-      <div class="f-group" style="margin-bottom:0;margin-top:12px">
+      <div id="keterangan-group" class="f-group" style="margin-bottom:0;margin-top:12px">
         <label class="f-label">Keterangan (opsional)</label>
         <input type="text" id="input-ket" class="f-input" placeholder="cth. meja 5, takeaway…" style="font-size:13px">
       </div>
@@ -357,7 +379,7 @@
     </div>
 
     {{-- Action buttons --}}
-    <div style="padding:12px 24px 20px;display:flex;gap:10px;position:sticky;bottom:0;background:var(--surface);border-top:1px solid var(--border)">
+    <div id="pay-action-bar" style="padding:12px 24px 20px;display:flex;gap:10px;position:sticky;bottom:0;background:var(--surface);border-top:1px solid var(--border)">
       <button type="button" onclick="closePayment()" class="btn" style="flex:1;justify-content:center;padding:11px">Batal</button>
       <button type="button" id="btn-konfirmasi" onclick="konfirmasiTransaksi()"
         class="btn btn-primary" style="flex:2;justify-content:center;padding:11px;font-size:13.5px" disabled>
@@ -420,15 +442,21 @@
   </div>
 </div>
 
+@if($midtransSnapUrl)
+<script src="{{ $midtransSnapUrl }}" data-client-key="{{ $midtransClientKey }}"></script>
+@endif
+
 @push('scripts')
 <script>
 // ── State ──
-var cart      = {};
-var activecat = 0;
-var activeMethods = @json($activeMethods);
-var metode    = activeMethods[0] || 'tunai';
-var cartOpen  = false;   // mobile expand state
-var outletNama = '{{ addslashes($outlets->firstWhere("id", $outletId)?->nama ?? "") }}';
+var cart           = {};
+var activecat      = 0;
+var activeMethods  = @json($activeMethods);
+var metode         = activeMethods[0] || 'tunai';
+var cartOpen       = false;
+var gatewayOrderId = null;
+var gatewayActive  = false;   // true saat QR Midtrans sedang ditampilkan
+var outletNama     = '{{ addslashes($outlets->firstWhere("id", $outletId)?->nama ?? "") }}';
 
 // ── Mobile cart toggle ──
 function isMobile() { return window.innerWidth <= 900; }
@@ -550,12 +578,21 @@ function updateSummary() {
 // ── Metode Bayar ──
 function setMetode(m) {
   metode = m;
-  ['tunai','qris','transfer'].forEach(function(k){
+  ['tunai','qris','transfer','gateway'].forEach(function(k){
     var tab   = document.getElementById('tab-' + k);
     var panel = document.getElementById('panel-' + k);
     if (tab)   tab.classList.toggle('active', k === m);
     if (panel) panel.style.display = (k === m) ? 'block' : 'none';
   });
+  // Saat gateway dipilih, sembunyikan keterangan & tombol — muncul lagi setelah QR ditampilkan
+  var ketGroup = document.getElementById('keterangan-group');
+  var actBar   = document.querySelector('#pay-box > div:last-child');
+  if (m === 'gateway') {
+    if (ketGroup) ketGroup.style.display = 'none';
+    resetGatewayPanel();
+  } else {
+    if (ketGroup) ketGroup.style.display = '';
+  }
   validatePayment();
 }
 
@@ -631,13 +668,25 @@ function openPayment() {
   }); });
 }
 
-function closePayment() {
+function closePayment(force) {
+  if (gatewayActive && !force) {
+    showToast('warning', 'QR pembayaran sedang aktif. Tunggu hingga pelanggan selesai membayar, atau klik Batalkan Pembayaran.');
+    return;
+  }
+  gatewayActive = false;
   var backdrop = document.getElementById('pay-backdrop');
   var box      = document.getElementById('pay-box');
   backdrop.style.opacity = '0';
   box.style.opacity      = '0';
   box.style.transform    = 'scale(.93) translateY(14px)';
-  setTimeout(function(){ backdrop.style.display = 'none'; }, 220);
+  setTimeout(function(){
+    backdrop.style.display = 'none';
+    resetGatewayPanel();
+    var actBar = document.getElementById('pay-action-bar');
+    if (actBar) actBar.style.display = '';
+    var ketGroup = document.getElementById('keterangan-group');
+    if (ketGroup) ketGroup.style.display = '';
+  }, 220);
 }
 
 function maskBayar(input) {
@@ -687,17 +736,30 @@ function validatePayment() {
   if (metode === 'tunai') {
     var bayar = parseInt(document.getElementById('input-bayar').value.replace(/\D/g, '')) || 0;
     ok = bayar >= total && total > 0;
+  } else if (metode === 'gateway') {
+    ok = total > 0;
+    if (btn) btn.innerHTML = '<i class="fa-solid fa-qrcode"></i> Muat QR Pembayaran';
   } else {
     var input = document.getElementById('input-bukti-' + metode);
     ok = input && input.files && input.files.length > 0 && total > 0;
   }
-  btn.disabled = !ok;
+  if (btn) btn.disabled = !ok;
 }
 
 function konfirmasiTransaksi() {
+  if (metode === 'gateway') {
+    loadGatewayQR();
+    return;
+  }
+
   var btn = document.getElementById('btn-konfirmasi');
   btn.disabled = true;
   btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Memproses…';
+  simpanTransaksi(null);
+}
+
+function simpanTransaksi(paymentRef) {
+  var btn = document.getElementById('btn-konfirmasi');
 
   var items = Object.values(cart).map(function(item){
     return { product_id:item.id, nama:item.nama, harga:item.harga, qty:item.qty, subtotal:item.harga*item.qty };
@@ -708,14 +770,17 @@ function konfirmasiTransaksi() {
   fd.append('outlet_id',    '{{ $outletId }}');
   fd.append('metode_bayar', metode);
   fd.append('items',        JSON.stringify(items));
-  fd.append('keterangan',   document.getElementById('input-ket').value);
+  fd.append('keterangan',   document.getElementById('input-ket') ? document.getElementById('input-ket').value : '');
 
   if (metode === 'tunai') {
     fd.append('bayar', parseInt(document.getElementById('input-bayar').value.replace(/\D/g, '')) || 0);
+  } else if (metode === 'gateway') {
+    fd.append('bayar', getTotal());
+    fd.append('payment_ref', paymentRef || '');
   } else {
     fd.append('bayar', getTotal());
     var buktiInput = document.getElementById('input-bukti-' + metode);
-    if (buktiInput.files && buktiInput.files[0]) {
+    if (buktiInput && buktiInput.files && buktiInput.files[0]) {
       fd.append('bukti_bayar', buktiInput.files[0]);
     }
   }
@@ -726,9 +791,7 @@ function konfirmasiTransaksi() {
     body:    fd,
   })
   .then(function(res) {
-    if (!res.ok) {
-      return res.json().then(function(err) { throw err; });
-    }
+    if (!res.ok) return res.json().then(function(err){ throw err; });
     return res.json();
   })
   .then(function(data) {
@@ -736,21 +799,124 @@ function konfirmasiTransaksi() {
     showSuccessModal(data);
   })
   .catch(function(err) {
-    btn.disabled = false;
-    btn.innerHTML = '<i class="fa-solid fa-check"></i> Konfirmasi';
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-check"></i> Konfirmasi'; }
     var msg = 'Terjadi kesalahan. Silahkan coba lagi.';
-    if (err && err.message) {
-      msg = err.message;
-    } else if (err && err.errors) {
-      // Laravel validation errors
-      var first = Object.values(err.errors)[0];
-      msg = Array.isArray(first) ? first[0] : first;
-    }
+    if (err && err.message)      msg = err.message;
+    else if (err && err.errors)  msg = Object.values(err.errors)[0]?.[0] || msg;
     showToast('error', msg);
   });
 }
 
-var metodeLabel = { tunai:'Tunai', qris:'QRIS', transfer:'Transfer' };
+// ── Gateway / QRIS Midtrans ──
+function resetGatewayPanel() {
+  gatewayOrderId = null;
+  gatewayActive  = false;
+  var idle    = document.getElementById('gateway-idle');
+  var loading = document.getElementById('gateway-loading');
+  var snap    = document.getElementById('snap-container');
+  if (idle)    idle.style.display    = 'block';
+  if (loading) loading.style.display = 'none';
+  if (snap)    snap.innerHTML        = '';
+  resetBatalBtn();
+}
+
+function resetBatalBtn() {
+  var btnBatal = document.querySelector('#pay-action-bar .btn:first-child');
+  if (btnBatal) {
+    btnBatal.innerHTML = 'Batal';
+    btnBatal.classList.remove('btn-danger');
+    btnBatal.onclick = function(){ closePayment(); };
+  }
+}
+
+function confirmCancelGateway() {
+  if (!confirm('Yakin ingin membatalkan pembayaran?\n\nJika pelanggan sudah membayar, konfirmasi akan tetap masuk via sistem. Transaksi dapat dicek di Riwayat Transaksi.')) return;
+  gatewayActive = false;
+  resetGatewayPanel();
+  var actBar = document.getElementById('pay-action-bar');
+  if (actBar) actBar.style.display = '';
+  var ketGroup = document.getElementById('keterangan-group');
+  if (ketGroup) ketGroup.style.display = '';
+}
+
+function loadGatewayQR() {
+  var idle    = document.getElementById('gateway-idle');
+  var loading = document.getElementById('gateway-loading');
+  var btn     = document.getElementById('btn-konfirmasi');
+  var actBar  = document.getElementById('pay-action-bar');
+
+  idle.style.display    = 'none';
+  loading.style.display = 'block';
+  btn.disabled          = true;
+  btn.innerHTML         = '<i class="fa-solid fa-spinner fa-spin"></i> Memuat QR…';
+
+  var items = Object.values(cart).map(function(item){
+    return { product_id:item.id, nama:item.nama, harga:item.harga, qty:item.qty, subtotal:item.harga*item.qty };
+  });
+
+  fetch('{{ route("transactions.snap-token") }}', {
+    method:  'POST',
+    headers: { 'Accept': 'application/json', 'Content-Type': 'application/json',
+               'X-CSRF-TOKEN': '{{ csrf_token() }}' },
+    body: JSON.stringify({ outlet_id: '{{ $outletId }}', items: JSON.stringify(items) }),
+  })
+  .then(function(res){
+    if (!res.ok) return res.json().then(function(e){ throw e; });
+    return res.json();
+  })
+  .then(function(data){
+    loading.style.display = 'none';
+    gatewayOrderId        = data.order_id;
+
+    // Sembunyikan action bar saat QR muncul
+    if (actBar) actBar.style.display = 'none';
+
+    // Tandai QR aktif — blokir tutup modal
+    gatewayActive = true;
+    var btnBatal = document.querySelector('#pay-action-bar .btn:first-child');
+    if (btnBatal) {
+      btnBatal.innerHTML = '<i class="fa-solid fa-circle-xmark"></i> Batalkan Pembayaran';
+      btnBatal.classList.add('btn-danger');
+      btnBatal.onclick = function(){ confirmCancelGateway(); };
+    }
+
+    snap.embed(data.snap_token, {
+      embedId: 'snap-container',
+      onSuccess: function(result) {
+        gatewayActive = false;
+        simpanTransaksi(result.order_id || gatewayOrderId);
+      },
+      onPending: function(result) {
+        gatewayActive = false;
+        showToast('info', 'Pembayaran tertunda. Selesaikan pembayaran Anda.');
+        closePayment(true);
+      },
+      onError: function(result) {
+        gatewayActive = false;
+        showToast('error', 'Pembayaran gagal. Silakan coba lagi.');
+        resetGatewayPanel();
+        if (actBar) actBar.style.display = '';
+        resetBatalBtn();
+      },
+      onClose: function() {
+        // Pelanggan menutup UI Snap (belum tentu batal bayar)
+        if (gatewayActive) {
+          showToast('warning', 'UI pembayaran ditutup. Gunakan "Batalkan Pembayaran" jika ingin membatalkan.');
+        }
+      },
+    });
+  })
+  .catch(function(err){
+    loading.style.display = 'none';
+    idle.style.display    = 'block';
+    btn.disabled          = false;
+    btn.innerHTML         = '<i class="fa-solid fa-qrcode"></i> Muat QR Pembayaran';
+    var msg = (err && err.message) ? err.message : 'Gagal memuat QR pembayaran.';
+    showToast('error', msg);
+  });
+}
+
+var metodeLabel = { tunai:'Tunai', qris:'QRIS', transfer:'Transfer', gateway:'Payment Gateway' };
 
 function showSuccessModal(data) {
   document.getElementById('suc-nomor').textContent    = 'No. ' + data.nomor;
@@ -808,6 +974,9 @@ document.addEventListener('keydown', function(e){
   }
 });
 document.getElementById('pay-backdrop').addEventListener('click', function(e){ if (e.target===this) closePayment(); });
+document.addEventListener('keydown', function(e){
+  if (e.key === 'Escape' && gatewayActive) { e.stopImmediatePropagation(); closePayment(); }
+}, true);
 document.getElementById('success-backdrop').addEventListener('click', function(e){ if (e.target===this) transaksiBerikutnya(); });
 </script>
 @endpush

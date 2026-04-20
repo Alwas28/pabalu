@@ -1,5 +1,21 @@
 <x-app-layout title="Edit Produk">
 
+@push('styles')
+<style>
+.form-grid-2col {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 20px;
+  align-items: start;
+}
+@media (max-width: 768px) {
+  .form-grid-2col {
+    grid-template-columns: 1fr;
+  }
+}
+</style>
+@endpush
+
   <div style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted)">
     <a href="{{ route('products.index') }}" style="color:var(--muted);text-decoration:none;transition:color .15s"
       onmouseover="this.style.color='var(--ac)'" onmouseout="this.style.color='var(--muted)'">
@@ -12,7 +28,7 @@
   <form method="POST" action="{{ route('products.update', $product) }}" enctype="multipart/form-data">
     @csrf
     @method('PUT')
-    <div style="display:grid;grid-template-columns:1fr 300px;gap:20px;align-items:start">
+    <div class="form-grid-2col">
 
       {{-- Kiri --}}
       <div style="display:flex;flex-direction:column;gap:20px">
@@ -103,7 +119,7 @@
       </div>
 
       {{-- Kanan --}}
-      <div style="display:flex;flex-direction:column;gap:16px">
+      <div class="col-aside" style="display:flex;flex-direction:column;gap:16px">
 
         <div class="card animate-fadeUp" style="border-color:var(--ac)44">
           <div class="card-body" style="padding:18px;text-align:center">

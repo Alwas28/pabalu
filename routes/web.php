@@ -1,7 +1,9 @@
 <?php
 
 use App\Http\Controllers\ActivityLogController;
+use App\Http\Controllers\BillingController;
 use App\Http\Controllers\OwnerAccountController;
+use App\Http\Controllers\OwnerBillingController;
 use App\Http\Controllers\GuideController;
 use App\Http\Controllers\OwnerPaymentMethodController;
 use App\Http\Controllers\OwnerPaymentSettingController;
@@ -49,6 +51,11 @@ Route::prefix('order')->name('order.')->group(function () {
     Route::post('/{slug}',       [PublicOrderController::class, 'store'])->name('store');
     Route::get('/status/{number}', [PublicOrderController::class, 'status'])->name('status');
 });
+
+// ── API Documentation ──────────────────────────────────
+Route::get('/api-docs', function () {
+    return view('api.docs');
+})->middleware(['auth', 'verified', 'can:api.docs'])->name('api.docs');
 
 // Halaman akun suspended/expired (auth tapi tidak perlu account.access)
 Route::middleware(['auth', 'verified'])->get('/account-suspended', function () {
@@ -200,9 +207,25 @@ Route::middleware(['auth', 'verified', 'account.access'])->group(function () {
         Route::get('/poll',              [OrderQueueController::class, 'poll'])->name('poll');
     });
 
+    // Admin — Billing Tagihan
+    Route::middleware('can:billing.manage')->prefix('admin/billing')->name('admin.billing.')->group(function () {
+        Route::get('/',                          [BillingController::class, 'index'])->name('index');
+        Route::post('/',                         [BillingController::class, 'store'])->name('store');
+        Route::post('/{invoice}/cancel',         [BillingController::class, 'cancel'])->name('cancel');
+        Route::delete('/{invoice}',              [BillingController::class, 'destroy'])->name('destroy');
+    });
+
+    // Owner — Tagihan Aplikasi
+    Route::middleware('can:billing.read')->prefix('billing')->name('billing.')->group(function () {
+        Route::get('/',           [OwnerBillingController::class, 'index'])->name('index');
+        Route::post('/snap-token', [OwnerBillingController::class, 'snapToken'])->name('snap-token');
+        Route::post('/mark-paid', [OwnerBillingController::class, 'markPaid'])->name('mark-paid');
+    });
+
     // Transaksi / POS
     Route::middleware('can:transaction.read')->prefix('transactions')->name('transactions.')->group(function () {
         Route::get('/pos',                [TransactionController::class, 'pos'])->middleware('can:transaction.create')->name('pos');
+        Route::post('/snap-token',        [TransactionController::class, 'snapToken'])->middleware('can:transaction.create')->name('snap-token');
         Route::post('/',                  [TransactionController::class, 'store'])->middleware('can:transaction.create')->name('store');
         Route::get('/',                   [TransactionController::class, 'index'])->name('index');
         Route::get('/{transaction}',      [TransactionController::class, 'show'])->name('show');

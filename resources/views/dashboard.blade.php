@@ -1,5 +1,38 @@
 <x-app-layout title="Dashboard">
 
+  {{-- Billing invoice banner (owner only) --}}
+  @if(isset($billingInvoice) && $billingInvoice)
+  @php
+    $bIsOverdue  = $billingInvoice->isOverdue();
+    $bIsDueSoon  = $billingInvoice->isDueSoon();
+    $bBg     = $bIsOverdue ? 'rgba(239,68,68,.08)'   : 'rgba(245,158,11,.08)';
+    $bBorder = $bIsOverdue ? 'rgba(239,68,68,.3)'    : 'rgba(245,158,11,.3)';
+    $bColor  = $bIsOverdue ? '#f87171'               : '#f59e0b';
+    $bIcon   = $bIsOverdue ? 'fa-circle-exclamation' : 'fa-file-invoice-dollar';
+    $bLabel  = $bIsOverdue ? 'Tagihan OVERDUE!'      : 'Tagihan Jatuh Tempo Segera';
+  @endphp
+  <div style="background:{{ $bBg }};border:1px solid {{ $bBorder }};border-radius:14px;
+              padding:16px 22px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:8px">
+    <i class="fa-solid {{ $bIcon }}" style="font-size:22px;color:{{ $bColor }};flex-shrink:0"></i>
+    <div style="flex:1;min-width:180px">
+      <div style="font-weight:700;font-size:14px;color:{{ $bColor }}">{{ $bLabel }}</div>
+      <div style="font-size:13px;color:var(--sub)">
+        {{ $billingInvoice->description }}
+        — Rp {{ number_format($billingInvoice->amount, 0, ',', '.') }}
+        · Jatuh tempo: {{ $billingInvoice->due_date->isoFormat('D MMM YYYY') }}
+      </div>
+    </div>
+    @can('billing.read')
+    <a href="{{ route('billing.index') }}"
+       style="display:inline-flex;align-items:center;gap:7px;padding:8px 18px;border-radius:10px;
+              background:{{ $bColor }};color:#fff;font-weight:700;font-size:13px;text-decoration:none;white-space:nowrap;transition:opacity .15s"
+       onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
+      <i class="fa-solid fa-credit-card"></i> Bayar Tagihan
+    </a>
+    @endcan
+  </div>
+  @endif
+
   {{-- Email verified flash --}}
   @if(request()->has('verified'))
   <div style="background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.25);border-radius:12px;
@@ -267,7 +300,7 @@
         <tbody>
           @forelse($recentTrx as $trx)
           @php
-            $icons=['tunai'=>'money-bill-wave','qris'=>'qrcode','transfer'=>'building-columns'];
+            $icons=['tunai'=>'money-bill-wave','qris'=>'qrcode','transfer'=>'building-columns','gateway'=>'credit-card'];
             $m = $trx->metode_bayar ?? 'tunai';
           @endphp
           <tr>

@@ -18,7 +18,7 @@ class StockController extends Controller
         $outletId         = $assignedOutletId ?? $request->get('outlet_id', $outlets->first()?->id);
         $tanggal          = $request->get('tanggal', today()->toDateString());
 
-        $outlet   = $outletId ? $outlets->firstWhere('id', $outletId) : null;
+        $outlet   = $outletId ? Outlet::find($outletId) : null;
         $products = collect();
         $summary  = collect();
 

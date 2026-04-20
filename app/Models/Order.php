@@ -35,16 +35,20 @@ class Order extends Model
         return $this->hasMany(OrderItem::class);
     }
 
-    // ── Generate nomor order ──────────────────────────────
+    // ── Generate nomor order (unik per outlet per hari) ──
     public static function generateNumber(int $outletId): string
     {
-        $prefix = 'ORD-' . now()->format('Ymd');
-        $last   = self::where('outlet_id', $outletId)
-            ->whereDate('created_at', today())
-            ->lockForUpdate()
-            ->count();
+        $prefix = 'ORD-' . now()->format('Ymd') . '-' . $outletId;
 
-        return $prefix . '-' . str_pad($last + 1, 3, '0', STR_PAD_LEFT);
+        $last = self::where('outlet_id', $outletId)
+            ->where('order_number', 'like', $prefix . '-%')
+            ->lockForUpdate()
+            ->orderByDesc('id')
+            ->value('order_number');
+
+        $seq = $last ? (int) substr(strrchr($last, '-'), 1) : 0;
+
+        return $prefix . '-' . str_pad($seq + 1, 3, '0', STR_PAD_LEFT);
     }
 
     // ── Label & warna status ──────────────────────────────

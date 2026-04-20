@@ -439,22 +439,33 @@
 
           {{-- Server Key --}}
           <div class="f-group" style="margin-bottom:0">
-            <label class="f-label">Server Key <span style="font-size:11px;color:#f87171;font-weight:400">Rahasia</span></label>
+            <label class="f-label">
+              Server Key
+              <span style="font-size:11px;color:#f87171;font-weight:400;margin-left:4px">Rahasia — jangan dibagikan</span>
+            </label>
             <div style="position:relative">
               <input type="password" name="midtrans_server_key" id="modal-server-key" class="f-input"
-                placeholder="SB-Mid-server-... / Mid-server-..." autocomplete="off">
+                placeholder="SB-Mid-server-xxxx (Sandbox) / Mid-server-xxxx (Production)" autocomplete="off">
               <button type="button" onclick="toggleVis2('modal-server-key','eye2')"
                 style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--muted);font-size:13px">
                 <i class="fa-solid fa-eye" id="eye2"></i>
               </button>
             </div>
+            <div style="font-size:11px;color:var(--muted);margin-top:4px">
+              <i class="fa-solid fa-circle-info" style="margin-right:3px"></i>
+              Dimulai dengan <code style="background:var(--surface2);padding:1px 5px;border-radius:4px;color:var(--ac)">Mid-server-</code> atau <code style="background:var(--surface2);padding:1px 5px;border-radius:4px;color:var(--ac)">SB-Mid-server-</code>
+            </div>
           </div>
 
           {{-- Client Key --}}
           <div class="f-group" style="margin-bottom:0">
-            <label class="f-label">Client Key</label>
+            <label class="f-label">Client Key <span style="font-size:11px;color:var(--muted);font-weight:400;margin-left:4px">Untuk frontend</span></label>
             <input type="text" name="midtrans_client_key" id="modal-client-key" class="f-input"
-              placeholder="SB-Mid-client-... / Mid-client-..." autocomplete="off">
+              placeholder="SB-Mid-client-xxxx (Sandbox) / Mid-client-xxxx (Production)" autocomplete="off">
+            <div style="font-size:11px;color:var(--muted);margin-top:4px">
+              <i class="fa-solid fa-circle-info" style="margin-right:3px"></i>
+              Dimulai dengan <code style="background:var(--surface2);padding:1px 5px;border-radius:4px;color:var(--ac)">Mid-client-</code> atau <code style="background:var(--surface2);padding:1px 5px;border-radius:4px;color:var(--ac)">SB-Mid-client-</code>
+            </div>
           </div>
 
         </div>

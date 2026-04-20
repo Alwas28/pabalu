@@ -84,6 +84,13 @@ class RolePermissionSeeder extends Seeder
             // ── Panduan Penggunaan ──
             'guide.read',
             'guide.update',
+
+            // ── Billing (tagihan aplikasi) ──
+            'billing.read',   // owner: lihat tagihan sendiri
+            'billing.manage', // admin: buat/batalkan tagihan
+
+            // ── Dokumentasi API ──
+            'api.docs',       // akses halaman dokumentasi API
         ];
 
         foreach ($permissions as $perm) {
@@ -114,6 +121,8 @@ class RolePermissionSeeder extends Seeder
             'log.read',
             'setting.read', 'setting.update',
             'guide.read',
+            'billing.read',
+            'api.docs',
         ]);
 
         // Admin Outlet: operasional harian + laporan outlet sendiri

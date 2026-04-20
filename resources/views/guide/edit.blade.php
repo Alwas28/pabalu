@@ -3,13 +3,26 @@
 @push('styles')
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/easymde/dist/easymde.min.css">
 <style>
+.EasyMDEContainer { position: relative; z-index: 1; }
 .EasyMDEContainer .CodeMirror{
   background:var(--surface2);color:var(--text);border:1px solid var(--border);
-  border-radius:0 0 10px 10px;min-height:480px;font-size:14px;line-height:1.7
+  border-radius:0 0 10px 10px;min-height:480px;font-size:14px;line-height:1.7;
+  position:relative;z-index:1;
+}
+.EasyMDEContainer .CodeMirror,
+.EasyMDEContainer .CodeMirror *,
+.EasyMDEContainer .CodeMirror-scroll,
+.EasyMDEContainer .CodeMirror-sizer,
+.EasyMDEContainer .CodeMirror-lines {
+  pointer-events: auto !important;
+}
+.EasyMDEContainer .CodeMirror-cursor {
+  border-left: 2px solid var(--ac) !important;
+  pointer-events: none !important;
 }
 .EasyMDEContainer .editor-toolbar{
   background:var(--surface);border:1px solid var(--border);border-bottom:none;
-  border-radius:10px 10px 0 0;opacity:1
+  border-radius:10px 10px 0 0;opacity:1;position:relative;z-index:2;
 }
 .EasyMDEContainer .editor-toolbar button{color:var(--sub)!important;border-radius:6px}
 .EasyMDEContainer .editor-toolbar button:hover,.EasyMDEContainer .editor-toolbar button.active{
@@ -22,7 +35,7 @@
 .editor-preview p,.editor-preview li{color:var(--sub)}
 .editor-preview code{background:var(--surface2);padding:1px 5px;border-radius:4px;color:var(--ac);font-size:12px}
 .editor-preview blockquote{border-left:3px solid var(--ac);padding:8px 14px;background:var(--ac-lt);border-radius:0 8px 8px 0}
-.CodeMirror-cursor{border-left-color:var(--ac)!important}
+.CodeMirror-placeholder { color: var(--muted) !important; }
 </style>
 @endpush
 
@@ -53,7 +66,7 @@
         </div>
         <div style="display:flex;gap:10px">
           <a href="{{ route('guide.index') }}" class="btn" style="text-decoration:none">Batal</a>
-          <button type="submit" class="btn btn-primary">
+          <button type="button" onclick="syncAndSubmit()" class="btn btn-primary">
             <i class="fa-solid fa-floppy-disk"></i> Simpan Panduan
           </button>
         </div>
@@ -100,16 +113,26 @@ var easyMDE = new EasyMDE({
     'preview','side-by-side','fullscreen','|',
     'guide'
   ],
-  placeholder: '# Panduan Penggunaan Sistem Pabalu\n\n## Untuk Owner\n\nTulis panduan di sini...\n\n## Untuk Kasir\n\nTulis panduan kasir di sini...',
+  placeholder: '# Panduan Penggunaan Sistem Pabalu\n\n## 1. Kasir (POS)\n\nLangkah transaksi: pilih produk, masukkan qty, pilih metode bayar, proses.\n\n## 2. Stok\n\nCatat stok awal, tambah stok, dan barang rusak/waste.\n\n## 3. Kelola Produk\n\nTambah, edit, atau nonaktifkan produk dari menu Kelola Produk.\n\n## 4. Laporan\n\nLihat omzet, pengeluaran, dan laba per periode di menu Laporan.',
   minHeight: '480px',
   status: ['lines', 'words'],
+});
+
+// Sync EasyMDE ke textarea sebelum submit (apapun cara submitnya)
+function syncAndSubmit() {
+  document.getElementById('editor').value = easyMDE.value();
+  document.getElementById('guide-form').submit();
+}
+
+document.getElementById('guide-form').addEventListener('submit', function() {
+  document.getElementById('editor').value = easyMDE.value();
 });
 
 // Ctrl+S simpan
 document.addEventListener('keydown', function(e) {
   if ((e.ctrlKey || e.metaKey) && e.key === 's') {
     e.preventDefault();
-    document.getElementById('guide-form').submit();
+    syncAndSubmit();
   }
 });
 </script>

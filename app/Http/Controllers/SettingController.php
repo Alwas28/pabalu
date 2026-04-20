@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\ActivityLog;
-use App\Models\Outlet;
 use App\Models\Setting;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -38,9 +37,7 @@ class SettingController extends Controller
             'payment'  => 'Payment Gateway',
         ];
 
-        $outlets = auth()->user()->accessibleOutlets()->where('is_active', true)->orderBy('nama')->get();
-
-        return view('settings.index', compact('grouped', 'groupLabels', 'outlets'));
+        return view('settings.index', compact('grouped', 'groupLabels'));
     }
 
     public function update(Request $request): RedirectResponse
@@ -64,13 +61,6 @@ class SettingController extends Controller
         // Clear all setting cache
         foreach ($keys as $key) {
             Cache::forget("setting:{$key}");
-        }
-
-        // Save per-outlet payment gateway toggles
-        $enabledOutlets = $request->input('payment_outlet_ids', []);
-        Outlet::query()->update(['payment_gateway_enabled' => false]);
-        if (!empty($enabledOutlets)) {
-            Outlet::whereIn('id', $enabledOutlets)->update(['payment_gateway_enabled' => true]);
         }
 
         ActivityLog::record('update_settings', 'Pengaturan aplikasi diperbarui');

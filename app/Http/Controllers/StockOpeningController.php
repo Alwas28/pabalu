@@ -19,7 +19,7 @@ class StockOpeningController extends Controller
         $outletId         = $assignedOutletId ?? $request->get('outlet_id', $outlets->first()?->id);
         $tanggal          = $request->get('tanggal', today()->toDateString());
 
-        $outlet   = $outlets->firstWhere('id', $outletId);
+        $outlet   = $outletId ? Outlet::find($outletId) : null;
 
         // Produk aktif di outlet ini
         $products = $outletId

@@ -35,6 +35,10 @@ class Setting extends Model
 
         // Panduan Penggunaan
         ['key'=>'user_guide', 'label'=>'Panduan Penggunaan', 'group'=>'panduan', 'type'=>'richtext', 'value'=>'', 'description'=>'Panduan penggunaan sistem untuk Owner dan Kasir'],
+
+        // Grup: Billing (biaya penggunaan aplikasi)
+        ['key'=>'billing_grace_period',    'label'=>'Grace Period (hari)',        'group'=>'billing', 'type'=>'number', 'value'=>'7',                      'description'=>'Jumlah hari setelah due date sebelum akun disuspend otomatis'],
+        ['key'=>'billing_payment_methods', 'label'=>'Metode Pembayaran Tagihan',  'group'=>'billing', 'type'=>'text',   'value'=>'qris,bca_va,bni_va,bri_va,permata_va,cimb_va,danamon_va,echannel', 'description'=>'Pisahkan dengan koma. VA tersedia: bca_va, bni_va, bri_va, permata_va, cimb_va, danamon_va, echannel (Mandiri). Harus diaktifkan di dashboard Midtrans terlebih dahulu.'],
     ];
 
     // ── Helpers ────────────────────────────────────────

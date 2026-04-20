@@ -42,7 +42,7 @@
 
     {{-- ── Generic groups (aplikasi, stok, keuangan) ── --}}
     @foreach($grouped as $groupKey => $settings)
-    @if($groupKey === 'payment') @continue @endif
+    @if(in_array($groupKey, ['payment','panduan','billing'])) @continue @endif
     @php $label = $groupLabels[$groupKey] ?? ucfirst($groupKey); @endphp
     <div class="card animate-fadeUp" style="margin-bottom:0">
       <div class="card-header">
@@ -157,17 +157,22 @@
             <div>
               <div style="font-size:13.5px;font-weight:600;color:var(--text)">Server Key</div>
               <div style="font-size:12px;color:var(--muted);margin-top:3px;line-height:1.5">
-                Sandbox: <code style="color:var(--ac);font-size:11px">SB-Mid-server-xxxx</code><br>
-                Production: <code style="color:#34d399;font-size:11px">Mid-server-xxxx</code>
+                Digunakan di <b>backend</b> saja. Jangan bagikan.<br>
+                Sandbox: <code style="color:var(--ac);font-size:11px">SB-Mid-<b>server</b>-xxxx</code><br>
+                Production: <code style="color:#34d399;font-size:11px">Mid-<b>server</b>-xxxx</code>
               </div>
             </div>
-            <div style="position:relative">
-              <input type="password" name="midtrans_server_key" id="server-key-input" class="f-input"
-                value="{{ $midtransServerKey }}" placeholder="SB-Mid-server-...">
-              <button type="button" onclick="toggleVisibility('server-key-input','eye-server')"
-                style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--muted);font-size:13px">
-                <i class="fa-solid fa-eye" id="eye-server"></i>
-              </button>
+            <div>
+              <div style="position:relative">
+                <input type="password" name="midtrans_server_key" id="server-key-input" class="f-input"
+                  value="{{ $midtransServerKey }}" placeholder="SB-Mid-server-... atau Mid-server-..."
+                  oninput="validateKeyFormat(this,'server')">
+                <button type="button" onclick="toggleVisibility('server-key-input','eye-server')"
+                  style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--muted);font-size:13px">
+                  <i class="fa-solid fa-eye" id="eye-server"></i>
+                </button>
+              </div>
+              <div id="hint-server" style="font-size:11px;margin-top:5px;display:none"></div>
             </div>
           </div>
 
@@ -176,49 +181,16 @@
             <div>
               <div style="font-size:13.5px;font-weight:600;color:var(--text)">Client Key</div>
               <div style="font-size:12px;color:var(--muted);margin-top:3px;line-height:1.5">
-                Sandbox: <code style="color:var(--ac);font-size:11px">SB-Mid-client-xxxx</code><br>
-                Production: <code style="color:#34d399;font-size:11px">Mid-client-xxxx</code>
+                Digunakan di <b>frontend</b> (browser).<br>
+                Sandbox: <code style="color:var(--ac);font-size:11px">SB-Mid-<b>client</b>-xxxx</code><br>
+                Production: <code style="color:#34d399;font-size:11px">Mid-<b>client</b>-xxxx</code>
               </div>
             </div>
-            <input type="text" name="midtrans_client_key" class="f-input"
-              value="{{ $midtransClientKey }}" placeholder="SB-Mid-client-...">
-          </div>
-
-          <div style="height:1px;background:var(--border)"></div>
-
-          {{-- Outlet toggles --}}
-          <div style="display:grid;grid-template-columns:280px 1fr;gap:24px;align-items:start">
             <div>
-              <div style="font-size:13.5px;font-weight:600;color:var(--text)">Outlet yang Menerima Pembayaran Online</div>
-              <div style="font-size:12px;color:var(--muted);margin-top:3px;line-height:1.5">
-                Hanya outlet yang dicentang yang akan menampilkan tombol bayar di halaman order publik
-              </div>
-            </div>
-            <div style="display:flex;flex-direction:column;gap:8px">
-              @forelse($outlets as $outlet)
-              <label class="outlet-toggle-row" style="cursor:pointer">
-                <div style="display:flex;align-items:center;gap:10px">
-                  <div class="a-grad" style="width:32px;height:32px;border-radius:9px;display:grid;place-items:center;flex-shrink:0;font-size:12px;color:#fff;font-weight:700">
-                    {{ strtoupper(substr($outlet->nama,0,1)) }}
-                  </div>
-                  <div>
-                    <div style="font-size:13px;font-weight:600;color:var(--text)">{{ $outlet->nama }}</div>
-                    @if($outlet->alamat)
-                    <div style="font-size:11px;color:var(--muted)">{{ Str::limit($outlet->alamat, 50) }}</div>
-                    @endif
-                  </div>
-                </div>
-                <label class="toggle">
-                  <input type="checkbox" name="payment_outlet_ids[]" value="{{ $outlet->id }}"
-                    {{ $outlet->payment_gateway_enabled ? 'checked' : '' }}>
-                  <span class="toggle-slider"></span>
-                </label>
-              </label>
-              @empty
-              <div style="color:var(--muted);font-size:13px;padding:12px 0">
-                <i class="fa-solid fa-store-slash" style="margin-right:6px"></i>Belum ada outlet aktif.
-              </div>
-              @endforelse
+              <input type="text" name="midtrans_client_key" class="f-input"
+                value="{{ $midtransClientKey }}" placeholder="SB-Mid-client-... atau Mid-client-..."
+                oninput="validateKeyFormat(this,'client')">
+              <div id="hint-client" style="font-size:11px;margin-top:5px;display:none"></div>
             </div>
           </div>
 
@@ -268,9 +240,90 @@
             <div>
               <div style="font-size:13px;font-weight:600;color:var(--text)">Aktifkan & Simpan</div>
               <div style="font-size:12px;color:var(--muted);margin-top:3px">
-                Isi Server Key & Client Key di form di atas → centang outlet yang ingin menerima payment → klik <b>Simpan</b>
+                Isi Server Key & Client Key di form di atas → klik <b>Simpan</b>. Untuk mengaktifkan payment gateway per outlet, kelola melalui menu <b>Akun Owner</b>.
               </div>
             </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    {{-- ── Billing Settings ── --}}
+    @php
+      $bg = $grouped['billing'] ?? collect();
+      $bgMap = $bg->keyBy('key');
+      $billingGrace   = old('billing_grace_period', $bgMap->get('billing_grace_period')['value'] ?? '7');
+      $billingMethodsRaw = old('billing_payment_methods', $bgMap->get('billing_payment_methods')['value'] ?? '');
+      $activeBillingMethods = array_filter(array_map('trim', explode(',', $billingMethodsRaw)));
+      $allBillingMethods = [
+        'qris'        => ['label' => 'QRIS',         'icon' => 'fa-qrcode',      'color' => '#34d399'],
+        'bca_va'      => ['label' => 'VA BCA',        'icon' => 'fa-building-columns', 'color' => '#60a5fa'],
+        'bni_va'      => ['label' => 'VA BNI',        'icon' => 'fa-building-columns', 'color' => '#60a5fa'],
+        'bri_va'      => ['label' => 'VA BRI',        'icon' => 'fa-building-columns', 'color' => '#60a5fa'],
+        'permata_va'  => ['label' => 'VA Permata',    'icon' => 'fa-building-columns', 'color' => '#60a5fa'],
+        'cimb_va'     => ['label' => 'VA CIMB',       'icon' => 'fa-building-columns', 'color' => '#60a5fa'],
+        'danamon_va'  => ['label' => 'VA Danamon',    'icon' => 'fa-building-columns', 'color' => '#60a5fa'],
+        'echannel'    => ['label' => 'Mandiri Bill',  'icon' => 'fa-building-columns', 'color' => '#f59e0b'],
+      ];
+    @endphp
+    <div class="card animate-fadeUp" style="margin-bottom:0">
+      <div class="card-header">
+        <div class="card-title">
+          <i class="fa-solid fa-file-invoice-dollar" style="color:var(--ac);margin-right:8px"></i>
+          Billing Tagihan Aplikasi
+        </div>
+      </div>
+      <div class="card-body" style="display:flex;flex-direction:column;gap:20px">
+
+        {{-- Grace Period --}}
+        <div style="display:grid;grid-template-columns:280px 1fr;gap:24px;align-items:start">
+          <div>
+            <div style="font-size:13.5px;font-weight:600;color:var(--text)">Grace Period (hari)</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:3px">Jumlah hari setelah due date sebelum akun owner disuspend otomatis</div>
+          </div>
+          <input type="number" name="billing_grace_period" class="f-input" min="0" max="30" value="{{ $billingGrace }}">
+        </div>
+
+        <div style="height:1px;background:var(--border)"></div>
+
+        {{-- Metode Pembayaran Toggle --}}
+        <div style="display:grid;grid-template-columns:280px 1fr;gap:24px;align-items:start">
+          <div>
+            <div style="font-size:13.5px;font-weight:600;color:var(--text)">Metode Pembayaran Tagihan</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:3px;line-height:1.6">
+              Pilih metode yang tersedia untuk pembayaran tagihan aplikasi.<br>
+              <i class="fa-solid fa-circle-info" style="color:var(--ac)"></i>
+              Harus diaktifkan di <b>dashboard.midtrans.com</b> terlebih dahulu.
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            {{-- Hidden input agar value kosong juga terkirim --}}
+            <input type="hidden" name="billing_payment_methods" id="billing-methods-hidden" value="{{ $billingMethodsRaw }}">
+            @foreach($allBillingMethods as $key => $meta)
+            @php $isActive = in_array($key, $activeBillingMethods); @endphp
+            <div class="outlet-toggle-row" id="billing-row-{{ $key }}">
+              <div style="display:flex;align-items:center;gap:10px">
+                <div style="width:34px;height:34px;border-radius:9px;flex-shrink:0;display:grid;place-items:center;font-size:14px;
+                            background:{{ $isActive ? 'var(--ac-lt)' : 'var(--surface)' }};
+                            color:{{ $isActive ? 'var(--ac)' : 'var(--muted)' }};
+                            border:1px solid {{ $isActive ? 'var(--ac)' : 'var(--border)' }};
+                            transition:all .15s" id="billing-icon-{{ $key }}">
+                  <i class="fa-solid {{ $meta['icon'] }}"></i>
+                </div>
+                <div>
+                  <div style="font-size:13px;font-weight:600;color:var(--text)">{{ $meta['label'] }}</div>
+                  <div style="font-size:11px;color:var(--muted);font-family:monospace">{{ $key }}</div>
+                </div>
+              </div>
+              <label class="toggle" style="cursor:pointer">
+                <input type="checkbox" class="billing-method-cb" value="{{ $key }}"
+                  onchange="syncBillingMethods()"
+                  {{ $isActive ? 'checked' : '' }}>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            @endforeach
           </div>
         </div>
 
@@ -315,6 +368,55 @@ function toggleVisibility(inputId, iconId) {
 document.getElementById('midtrans-prod').addEventListener('change', function() {
   document.getElementById('prod-label').textContent = this.checked ? 'Production' : 'Sandbox';
 });
+
+// Validasi format key saat mengetik
+function validateKeyFormat(input, type) {
+  var val  = input.value.trim();
+  var hint = document.getElementById('hint-' + type);
+  if (!val) { hint.style.display = 'none'; return; }
+
+  var isServer = type === 'server';
+  var correct  = isServer
+    ? (val.includes('-server-'))
+    : (val.includes('-client-'));
+  var wrong = isServer
+    ? (val.includes('-client-'))
+    : (val.includes('-server-'));
+
+  hint.style.display = 'block';
+  if (wrong) {
+    hint.style.color = '#f87171';
+    hint.innerHTML   = '<i class="fa-solid fa-triangle-exclamation"></i> Sepertinya ini ' + (isServer ? 'Client' : 'Server') + ' Key — pastikan tidak tertukar!';
+  } else if (correct) {
+    hint.style.color = '#34d399';
+    hint.innerHTML   = '<i class="fa-solid fa-circle-check"></i> Format ' + (isServer ? 'Server' : 'Client') + ' Key terdeteksi.';
+  } else {
+    hint.style.display = 'none';
+  }
+}
+
+// Sync toggle switches → hidden input billing_payment_methods
+function syncBillingMethods() {
+  var checked = Array.from(document.querySelectorAll('.billing-method-cb:checked'))
+    .map(function(cb) { return cb.value; });
+  document.getElementById('billing-methods-hidden').value = checked.join(',');
+
+  // Update ikon visual setiap baris
+  document.querySelectorAll('.billing-method-cb').forEach(function(cb) {
+    var key  = cb.value;
+    var icon = document.getElementById('billing-icon-' + key);
+    if (!icon) return;
+    if (cb.checked) {
+      icon.style.background   = 'var(--ac-lt)';
+      icon.style.color        = 'var(--ac)';
+      icon.style.borderColor  = 'var(--ac)';
+    } else {
+      icon.style.background   = 'var(--surface)';
+      icon.style.color        = 'var(--muted)';
+      icon.style.borderColor  = 'var(--border)';
+    }
+  });
+}
 </script>
 @endpush
 

@@ -1,55 +1,27 @@
-Roadmap Pengembangan Pabalu
-Fase 1 — Fondasi Data Master
-Harus ada sebelum operasional bisa berjalan. Semua tabel transaksi butuh outlet_id.
+Cara Daftar Akun Midtrans:
 
-#	Fitur	Permission	Keterangan
-1	Kelola Outlet	outlet.*	Outlet adalah root dari semua data
-2	Kelola Kategori	category.*	Dibutuhkan sebelum input produk
-3	Kelola Produk	product.*	Dibutuhkan sebelum stok & transaksi
-Fase 2 — Operasional Harian
-Mengikuti urutan alur bisnis: buka → jual → tambah stok → catat keluar
+Buka dashboard.midtrans.com → klik Register
+Isi data: nama, email, nomor HP, nama bisnis
+Verifikasi email yang dikirim Midtrans
+Login → akan masuk ke mode Sandbox (uji coba) secara default
+Ambil API Key (Sandbox dulu):
 
-#	Fitur	Permission	Keterangan
-4	Opening Stok	stock.opening	Input stok awal setiap hari buka
-5	POS / Kasir	transaction.create	Transaksi penjualan, fitur terbesar
-6	Tambah Stok	stock.in	Input produksi/restok harian
-7	Waste / Barang Rusak	stock.waste	Catat barang yang tidak terjual/rusak
-8	Pengeluaran	expense.*	Biaya operasional harian
-9	Closing Harian	closing.create	Rekap & kunci data hari itu
-Fase 3 — Laporan
-Bisa dikerjakan setelah ada data transaksi.
+Di dashboard, klik Settings → Access Keys
+Salin:
+Server Key → SB-Mid-server-xxxx
+Client Key → SB-Mid-client-xxxx
+Masukkan ke sistem Pabalu melalui admin → Akun Owner → konfigurasi Midtrans owner yang bersangkutan
+Upgrade ke Production (agar bisa terima uang sungguhan):
 
-#	Fitur	Permission	Keterangan
-10	Laporan Penjualan	report.outlet/all	Per outlet & semua outlet
-11	Laporan Stok	report.outlet/all	Pergerakan stok, sisa stok
-12	Laporan Laba & Rugi	report.all	Omzet - HPP - pengeluaran
-Yang Dikerjakan Duluan
-→ Mulai dari Outlet, karena:
+Di dashboard Midtrans → Activation → lengkapi dokumen bisnis:
+KTP pemilik
+NPWP (jika ada)
+Rekening bank
+Dokumen legalitas usaha (SIUP/NIB jika ada)
+Tunggu verifikasi Midtrans (1–3 hari kerja)
+Setelah aktif, ambil Production Key (tanpa prefix SB-) dari menu Settings → Access Keys dengan toggle Production
+Update key di sistem dan aktifkan Mode Produksi di konfigurasi owner
 
-outlet_id wajib ada di hampir semua tabel
-User perlu di-assign ke outlet tertentu
-Tanpa outlet, Opening Stok dan POS tidak bisa berjalan
-Setelah outlet → Kategori → Produk, baru masuk ke operasional.
-
-
-
-ni yang masih belum dikerjakan:
-
-1. Activity Log belum ada di 4 controller CRUD:
-
-OutletController — store, update, destroy
-ProductController — store, update, destroy
-CategoryController — store, update, destroy
-RoleController — store, update, destroy
-2. Setting::get() belum dipakai di mana pun:
-Setting sudah bisa disimpan tapi nilainya tidak digunakan aplikasi:
-
-Key	Harusnya dipakai di	Kondisi sekarang
-app_name	Layout <title>	Hardcode config('app.name')
-receipt_footer	Struk cetak	Hardcode "Terima kasih telah berbelanja!"
-low_stock_threshold	Dashboard + Stok kritis	Hardcode angka 5
-currency_symbol	Seluruh tampilan harga	Hardcode "Rp"
-3. Riwayat Transaksi tidak ada pagination:
 
 
 Password@92
@@ -61,6 +33,22 @@ Keamanan
 - XSS (Cross-Site Scripting)
 - DDoS
 - Timezone
-- Hendel error
 
 Versi Mobile
+
+
+cek role, permission, role permission apakah sudah masuk ke seeder. begitupun dengan akun admin. kalau sudah masuk ke seeder silahkan bersihkan datanya. karna akan di deploy sistem ini
+
+Fitur Mobile
+    1. Opening stok
+    2. Antrian Order
+    3. Tambah Stok
+    4. Pengeluaran
+    5. Waste/Barang Rusak
+    6. Closing
+    7. Riwayat transaksi
+    8. Produk
+    9. Stok dan Pergerakan
+    10. Laba Rugi
+    11. Kelola Outlet
+    12. Kelola User

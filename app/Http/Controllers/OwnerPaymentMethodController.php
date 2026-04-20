@@ -33,7 +33,7 @@ class OwnerPaymentMethodController extends Controller
         ];
 
         $gatewayConfigured = !empty($s['midtrans_server_key'])
-            && Setting::get('midtrans_enabled') === '1';
+            && ($s['midtrans_enabled'] ?? '0') === '1';
 
         return view('owner.payment-methods', compact('methods', 'enabled', 'gatewayConfigured'));
     }
@@ -63,9 +63,9 @@ class OwnerPaymentMethodController extends Controller
         if (($s['pm_tunai']    ?? '1') === '1') $active[] = 'tunai';
         if (($s['pm_qris']     ?? '1') === '1') $active[] = 'qris';
         if (($s['pm_transfer'] ?? '1') === '1') $active[] = 'transfer';
-        if (($s['pm_gateway']  ?? '0') === '1'
+        if (($s['pm_gateway']       ?? '0') === '1'
             && !empty($s['midtrans_server_key'])
-            && Setting::get('midtrans_enabled') === '1') {
+            && ($s['midtrans_enabled'] ?? '0') === '1') {
             $active[] = 'gateway';
         }
 

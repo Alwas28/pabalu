@@ -139,8 +139,8 @@
         <tbody>
           @foreach($transactions as $trx)
           @php
-            $metodeLabel = ['tunai'=>'Tunai','qris'=>'QRIS','transfer'=>'Transfer'];
-            $metodeIcon  = ['tunai'=>'money-bill-wave','qris'=>'qrcode','transfer'=>'building-columns'];
+            $metodeLabel = ['tunai'=>'Tunai','qris'=>'QRIS','transfer'=>'Transfer','gateway'=>'Payment Gateway'];
+            $metodeIcon  = ['tunai'=>'money-bill-wave','qris'=>'qrcode','transfer'=>'building-columns','gateway'=>'credit-card'];
             $m = $trx->metode_bayar ?? 'tunai';
           @endphp
 

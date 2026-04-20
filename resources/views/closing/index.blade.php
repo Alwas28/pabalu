@@ -246,7 +246,7 @@
               <td style="font-size:12px;color:var(--sub)">{{ $trx->created_at->format('H:i') }}</td>
               <td style="color:var(--muted);font-size:12px">{{ $trx->items->count() }} produk</td>
               <td>
-                @php $m = $trx->metode_bayar ?? 'tunai'; $icons=['tunai'=>'money-bill-wave','qris'=>'qrcode','transfer'=>'building-columns']; @endphp
+                @php $m = $trx->metode_bayar ?? 'tunai'; $icons=['tunai'=>'money-bill-wave','qris'=>'qrcode','transfer'=>'building-columns','gateway'=>'credit-card']; @endphp
                 <span class="badge badge-blue" style="font-size:10.5px">
                   <i class="fa-solid fa-{{ $icons[$m] }}" style="font-size:9px"></i>
                   {{ ucfirst($m) }}

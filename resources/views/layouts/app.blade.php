@@ -415,11 +415,31 @@ textarea.f-input{resize:vertical;min-height:80px}
     @endcan
     @endcanany
 
-    {{-- Panduan --}}
-    @can('guide.read')
+    {{-- Panduan & Billing --}}
+    @canany(['guide.read','billing.read','billing.manage'])
     <p class="nav-section">Bantuan</p>
+    @endcanany
+    @can('guide.read')
     <a href="{{ route('guide.index') }}" class="nav-item {{ request()->routeIs('guide.*') ? 'nav-active' : 'nav-inactive' }}">
       <i class="fa-solid fa-book-open" style="width:15px;text-align:center;font-size:13px"></i>Panduan Penggunaan
+    </a>
+    @endcan
+    @can('api.docs')
+    <a href="{{ route('api.docs') }}" class="nav-item {{ request()->routeIs('api.docs') ? 'nav-active' : 'nav-inactive' }}" target="_blank">
+      <i class="fa-solid fa-code" style="width:15px;text-align:center;font-size:13px"></i>Dokumentasi API
+    </a>
+    @endcan
+    @can('billing.read')
+    @php $hasBillingAlert = isset($billingInvoice) && $billingInvoice; @endphp
+    <a href="{{ route('billing.index') }}" class="nav-item {{ request()->routeIs('billing.*') ? 'nav-active' : 'nav-inactive' }}">
+      <i class="fa-solid fa-file-invoice-dollar" style="width:15px;text-align:center;font-size:13px"></i>
+      Tagihan Aplikasi
+      @if($hasBillingAlert)<span style="margin-left:auto;width:8px;height:8px;border-radius:50%;background:#f87171;flex-shrink:0"></span>@endif
+    </a>
+    @endcan
+    @can('billing.manage')
+    <a href="{{ route('admin.billing.index') }}" class="nav-item {{ request()->routeIs('admin.billing.*') ? 'nav-active' : 'nav-inactive' }}">
+      <i class="fa-solid fa-file-invoice" style="width:15px;text-align:center;font-size:13px"></i>Manajemen Tagihan
     </a>
     @endcan
 
@@ -447,7 +467,8 @@ textarea.f-input{resize:vertical;min-height:80px}
     <a href="{{ route('owner.payment-methods.index') }}" class="nav-item {{ request()->routeIs('owner.payment-methods.*') ? 'nav-active' : 'nav-inactive' }}">
       <i class="fa-solid fa-wallet" style="width:15px;text-align:center;font-size:13px"></i>Metode Pembayaran
     </a>
-    @if(\App\Models\Setting::get('midtrans_enabled') === '1')
+    @php $ownerMidtransKey = \App\Models\OwnerSetting::get('midtrans_server_key', auth()->id(), ''); @endphp
+    @if(!empty($ownerMidtransKey))
     <a href="{{ route('owner.payment-settings.index') }}" class="nav-item {{ request()->routeIs('owner.payment-settings.*') ? 'nav-active' : 'nav-inactive' }}">
       <i class="fa-solid fa-credit-card" style="width:15px;text-align:center;font-size:13px"></i>Pembayaran Online
     </a>

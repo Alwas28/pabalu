@@ -20,6 +20,7 @@ class Transaction extends Model
         'status',
         'metode_bayar',
         'bukti_bayar',
+        'payment_ref',
     ];
 
     protected function casts(): array

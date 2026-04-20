@@ -1,5 +1,21 @@
 <x-app-layout title="Edit User">
 
+@push('styles')
+<style>
+.form-grid-user {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 20px;
+  align-items: start;
+}
+@media (max-width: 768px) {
+  .form-grid-user {
+    grid-template-columns: 1fr;
+  }
+}
+</style>
+@endpush
+
   {{-- Breadcrumb --}}
   <div style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted)">
     <a href="{{ route('users.index') }}" style="color:var(--muted);text-decoration:none;transition:color .15s"
@@ -24,7 +40,7 @@
     @csrf
     @method('PUT')
 
-    <div style="display:grid;grid-template-columns:1fr 340px;gap:20px;align-items:start">
+    <div class="form-grid-user">
 
       {{-- Left column --}}
       <div style="display:flex;flex-direction:column;gap:20px">
@@ -142,7 +158,7 @@
       </div>
 
       {{-- Right column --}}
-      <div style="display:flex;flex-direction:column;gap:20px">
+      <div class="col-aside-user" style="display:flex;flex-direction:column;gap:20px">
 
         {{-- User Info Card --}}
         <div class="card animate-fadeUp" style="border-color:{{ $roleColors2[$userRole] ?? 'var(--border)' }}44">

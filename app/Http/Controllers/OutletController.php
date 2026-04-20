@@ -108,6 +108,9 @@ class OutletController extends Controller
 
         $validated = $request->validate($rules);
 
+        // Checkbox tidak terkirim saat unchecked — baca dari boolean helper
+        $validated['is_active'] = $request->boolean('is_active');
+
         $outlet->update($validated);
 
         if ($outlet->wasChanged('nama') || ! $outlet->slug) {

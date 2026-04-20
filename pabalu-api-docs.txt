@@ -1,0 +1,1189 @@
+================================================================================
+  PABALU MOBILE API — DOKUMENTASI LENGKAP
+  Versi: 1.0 | Laravel 13 + Sanctum | PHP 8.3
+================================================================================
+
+DAFTAR ISI
+----------
+1.  Pengantar & Arsitektur
+2.  Autentikasi (Bearer Token)
+3.  Outlet
+4.  Produk (POS)
+5.  Transaksi
+6.  Stok
+7.  Pengeluaran
+8.  Antrian Order
+9.  Closing Harian
+10. Kelola Produk
+11. Kelola User
+12. Laporan
+13. Error Responses
+14. Catatan Role & Permission
+15. Contoh Alur Penggunaan
+
+================================================================================
+1. PENGANTAR & ARSITEKTUR
+================================================================================
+
+Base URL     : https://yourdomain.com/api
+Format       : JSON (Content-Type: application/json)
+Auth         : Laravel Sanctum — Bearer Token
+Semua endpoint kecuali POST /api/auth/login membutuhkan header:
+  Authorization: Bearer {token}
+  Accept: application/json
+
+ROLES YANG BISA LOGIN KE MOBILE:
+  - kasir  : akses terbatas ke outlet yang ditugaskan
+  - owner  : akses ke semua outlet miliknya
+  - admin  : akses penuh (biasanya pakai web, bukan mobile)
+
+MODEL DATA UTAMA:
+  - Outlet       : tempat usaha (punya owner_id, is_active)
+  - Product      : produk/menu (punya outlet_id, category_id, harga_jual, is_active)
+  - Transaction  : transaksi penjualan (outlet_id, kasir_id, nomor_transaksi, status)
+  - TransactionItem : item dalam transaksi
+  - StockMovement: gerakan stok (type: opening/in/waste/sold)
+  - Expense      : pengeluaran harian
+  - Order        : antrian order dari pelanggan online
+  - OrderItem    : item dalam order
+
+CATATAN PENTING:
+  - Kasir yang punya outlet_id: outlet_id dikirim otomatis, tidak perlu dikirim dari mobile
+  - Stok dihitung realtime: opening + in - waste - sold
+  - Tanggal default selalu today() jika tidak dikirim
+  - Semua nominal (harga, total, dll) dalam satuan RUPIAH (integer)
+
+================================================================================
+2. AUTENTIKASI
+================================================================================
+
+--------------------------------------------------------------------------------
+[POST] /api/auth/login
+Auth    : Tidak diperlukan
+Deskripsi: Login menggunakan email dan password. Mengembalikan Bearer token.
+           Cek status akun aktif sebelum login.
+--------------------------------------------------------------------------------
+REQUEST BODY:
+  email    string  required  Email user
+  password string  required  Password user
+
+RESPONSE 200:
+{
+  "token": "1|abc123xyz...",
+  "user": {
+    "id": 1,
+    "name": "Budi Kasir",
+    "email": "budi@outlet.com",
+    "role": "kasir",
+    "outlet_id": 2,
+    "account_type": "regular",
+    "permissions": ["transaction.create", "expense.create", "stock.create"],
+    "features": {
+      "pos": true,
+      "opening_stok": true,
+      "tambah_stok": true,
+      "waste": true,
+      "antrian_order": true,
+      "pengeluaran": true,
+      "closing": true,
+      "riwayat_transaksi": true,
+      "laporan": false,
+      "kelola_produk": false,
+      "kelola_user": false,
+      "kelola_outlet": false,
+      "lihat_semua_transaksi": false,
+      "lihat_semua_expense": false,
+      "lihat_expense_laporan": false,
+      "multi_outlet": false
+    }
+  }
+}
+
+CATATAN FEATURES (perbedaan kasir vs owner):
+  KASIR  → semua features dasar true, laporan/kelola_produk/kelola_user = false
+  OWNER  → semua true kecuali kelola_outlet
+  ADMIN  → semua true
+
+ERROR 401: {"message": "Email atau password salah."}
+ERROR 403: {"message": "Akun tidak aktif atau sudah kedaluwarsa."}
+ERROR 422: Validation error
+
+--------------------------------------------------------------------------------
+[POST] /api/auth/logout
+Auth    : Bearer Token
+Deskripsi: Logout dan hapus token aktif saat ini.
+--------------------------------------------------------------------------------
+RESPONSE 200:
+{
+  "message": "Logout berhasil."
+}
+
+--------------------------------------------------------------------------------
+[GET] /api/auth/me
+Auth    : Bearer Token
+Deskripsi: Mengembalikan data user + features lengkap. Panggil ini saat app dibuka
+           ulang untuk refresh state (token masih valid, session restore).
+           Response sama persis dengan field "user" di response login.
+--------------------------------------------------------------------------------
+RESPONSE 200:
+{
+  "id": 1,
+  "name": "Budi Kasir",
+  "email": "budi@outlet.com",
+  "role": "kasir",
+  "outlet_id": 2,
+  "account_type": "regular",
+  "permissions": ["transaction.create", "expense.create"],
+  "features": {
+    "pos": true,
+    "opening_stok": true,
+    "tambah_stok": true,
+    "waste": true,
+    "antrian_order": true,
+    "pengeluaran": true,
+    "closing": true,
+    "riwayat_transaksi": true,
+    "laporan": false,
+    "kelola_produk": false,
+    "kelola_user": false,
+    "kelola_outlet": false,
+    "lihat_semua_transaksi": false,
+    "lihat_semua_expense": false,
+    "lihat_expense_laporan": false,
+    "multi_outlet": false
+  }
+}
+
+================================================================================
+3. OUTLET
+================================================================================
+
+--------------------------------------------------------------------------------
+[GET] /api/outlets
+Auth    : Bearer Token
+Deskripsi: Mengembalikan semua outlet aktif yang bisa diakses user login.
+           Kasir mendapat 1 outlet, Owner mendapat semua outletnya.
+--------------------------------------------------------------------------------
+RESPONSE 200:
+[
+  {
+    "id": 1,
+    "nama": "Outlet A",
+    "alamat": "Jl. Merdeka No. 1",
+    "telepon": "08123456789"
+  },
+  {
+    "id": 2,
+    "nama": "Outlet B",
+    "alamat": "Jl. Sudirman No. 5",
+    "telepon": "08987654321"
+  }
+]
+
+================================================================================
+4. PRODUK (POS)
+================================================================================
+
+Endpoint ini khusus untuk tampilan POS kasir — hanya produk aktif + stok hari ini.
+Untuk CRUD produk, lihat bagian "10. Kelola Produk".
+
+--------------------------------------------------------------------------------
+[GET] /api/products
+Auth    : Bearer Token
+Deskripsi: Produk aktif di outlet beserta stok realtime hari ini.
+           Digunakan di halaman kasir POS untuk memilih item yang dijual.
+--------------------------------------------------------------------------------
+QUERY PARAMS:
+  outlet_id  integer  required  ID outlet
+
+RESPONSE 200:
+{
+  "products": [
+    {
+      "id": 1,
+      "nama": "Ayam Geprek",
+      "harga": 15000,
+      "stok": 8,
+      "category_id": 1,
+      "category": "Makanan",
+      "foto": "https://yourdomain.com/storage/products/ayam.jpg"
+    }
+  ],
+  "categories": ["Makanan", "Minuman"]
+}
+
+CATATAN: "foto" bernilai null jika produk tidak punya gambar.
+CATATAN: "stok" dihitung dari StockMovement (opening + in - waste - sold) per hari ini.
+
+================================================================================
+5. TRANSAKSI
+================================================================================
+
+--------------------------------------------------------------------------------
+[GET] /api/transactions/config
+Auth    : Bearer Token
+Deskripsi: Konfigurasi metode pembayaran dan Midtrans client key untuk outlet.
+           Panggil endpoint ini sebelum membuka layar POS.
+--------------------------------------------------------------------------------
+QUERY PARAMS:
+  outlet_id  integer  required  ID outlet
+
+RESPONSE 200:
+{
+  "active_methods": ["tunai", "qris", "transfer"],
+  "midtrans_client_key": "Mid-client-xxxxx",
+  "midtrans_snap_url": "https://app.sandbox.midtrans.com/snap/snap.js"
+}
+
+CATATAN: midtrans_client_key dan midtrans_snap_url bernilai null jika gateway tidak aktif.
+CATATAN: active_methods berisi kombinasi: tunai, qris, transfer, gateway
+
+--------------------------------------------------------------------------------
+[POST] /api/transactions/snap-token
+Auth    : Bearer Token
+Deskripsi: Membuat sesi pembayaran Midtrans Snap untuk metode gateway.
+           Token yang dikembalikan digunakan oleh Snap SDK di mobile.
+--------------------------------------------------------------------------------
+REQUEST BODY:
+  outlet_id          integer  required  ID outlet
+  items              array    required  Array item yang dibeli
+  items.*.product_id integer  required  ID produk
+  items.*.nama       string   required  Nama produk
+  items.*.harga      numeric  required  Harga satuan
+  items.*.qty        integer  required  Jumlah beli (min 1)
+  items.*.subtotal   numeric  required  Subtotal item (harga * qty)
+
+RESPONSE 200:
+{
+  "snap_token": "tokenxxx-yyy-zzz",
+  "order_id": "POS-20241201120530-4521"
+}
+
+ERROR 422: {"message": "Payment gateway tidak aktif untuk outlet ini."}
+
+--------------------------------------------------------------------------------
+[POST] /api/transactions
+Auth    : Bearer Token
+Deskripsi: Menyimpan transaksi penjualan baru.
+           Validasi stok dilakukan otomatis sebelum menyimpan.
+           Stok tidak dikurangi di sini — dikurangi melalui StockMovement sold.
+--------------------------------------------------------------------------------
+REQUEST BODY:
+  outlet_id          integer  required            ID outlet (auto-fill untuk kasir)
+  metode_bayar       string   required            tunai / qris / transfer / gateway
+  bayar              numeric  required jika tunai  Jumlah uang yang dibayarkan
+  items              array    required            Array item yang dibeli
+  items.*.product_id integer  required            ID produk
+  items.*.nama       string   required            Nama produk
+  items.*.harga      numeric  required            Harga satuan
+  items.*.qty        integer  required            Jumlah beli (min 1)
+  items.*.subtotal   numeric  required            Subtotal item
+  keterangan         string   optional            Catatan transaksi
+  payment_ref        string   required jika gateway  Order ID dari Midtrans
+
+RESPONSE 201:
+{
+  "success": true,
+  "id": 42,
+  "nomor": "TRX-001-20241201-001",
+  "total": 30000,
+  "bayar": 50000,
+  "kembalian": 20000,
+  "metode": "tunai",
+  "tanggal": "2024-12-01"
+}
+
+ERROR 422: {"message": "Stok \"Ayam Geprek\" tidak mencukupi. Tersedia: 3, diminta: 5."}
+ERROR 422: {"message": "Jumlah bayar kurang dari total transaksi."}
+
+--------------------------------------------------------------------------------
+[GET] /api/transactions/{transaction}
+Auth    : Bearer Token
+Deskripsi: Detail transaksi lengkap untuk mencetak struk.
+           Kasir hanya bisa melihat transaksi miliknya sendiri.
+--------------------------------------------------------------------------------
+URL PARAMS:
+  transaction  integer  required  ID transaksi
+
+RESPONSE 200:
+{
+  "id": 42,
+  "nomor_transaksi": "TRX-001-20241201-001",
+  "tanggal": "2024-12-01",
+  "outlet": {
+    "id": 1,
+    "nama": "Outlet A",
+    "alamat": "Jl. Merdeka No. 1",
+    "telepon": "08123456789"
+  },
+  "kasir": {"id": 1, "name": "Budi Kasir"},
+  "metode_bayar": "tunai",
+  "total": 30000,
+  "bayar": 50000,
+  "kembalian": 20000,
+  "keterangan": "Meja 3",
+  "status": "paid",
+  "items": [
+    {
+      "nama_produk": "Ayam Geprek",
+      "harga_satuan": 15000,
+      "qty": 2,
+      "subtotal": 30000
+    }
+  ]
+}
+
+ERROR 403: {"message": "Tidak punya akses ke transaksi ini."}
+
+--------------------------------------------------------------------------------
+[GET] /api/transactions
+Auth    : Bearer Token
+Deskripsi: Riwayat transaksi hari ini (default).
+           Kasir hanya melihat transaksi yang dia buat sendiri.
+           Owner/Admin melihat semua transaksi di outlet.
+--------------------------------------------------------------------------------
+QUERY PARAMS:
+  outlet_id  integer  optional  ID outlet
+  tanggal    date     optional  Filter tanggal (default: hari ini) format YYYY-MM-DD
+
+RESPONSE 200:
+[
+  {
+    "id": 42,
+    "nomor_transaksi": "TRX-001-20241201-001",
+    "outlet": "Outlet A",
+    "total": 30000,
+    "metode_bayar": "tunai",
+    "status": "paid",
+    "items_count": 2
+  }
+]
+
+================================================================================
+6. STOK
+================================================================================
+
+Logika stok di Pabalu:
+  stok_akhir = opening + in - waste - sold
+  "sold" dihitung otomatis dari TransactionItem yang sudah "paid"
+
+--------------------------------------------------------------------------------
+[GET] /api/stock
+Auth    : Bearer Token
+Deskripsi: Stok realtime per produk untuk outlet hari ini.
+--------------------------------------------------------------------------------
+QUERY PARAMS:
+  outlet_id  integer  required  ID outlet
+
+RESPONSE 200:
+[
+  {
+    "id": 1,
+    "nama": "Ayam Geprek",
+    "category": "Makanan",
+    "stok": 8
+  }
+]
+
+--------------------------------------------------------------------------------
+[GET] /api/stock/opening
+Auth    : Bearer Token
+Deskripsi: Data produk beserta qty opening yang sudah diinput hari ini.
+           Gunakan untuk pre-fill form input opening stok.
+--------------------------------------------------------------------------------
+QUERY PARAMS:
+  outlet_id  integer  required  ID outlet
+
+RESPONSE 200:
+{
+  "tanggal": "2024-12-01",
+  "products": [
+    {
+      "id": 1,
+      "nama": "Ayam Geprek",
+      "category": "Makanan",
+      "qty_opening": 10,
+      "stok_sekarang": 8
+    }
+  ]
+}
+
+CATATAN: "qty_opening" = 0 berarti opening hari ini belum diinput.
+
+--------------------------------------------------------------------------------
+[POST] /api/stock/opening
+Auth    : Bearer Token
+Deskripsi: Menyimpan stok awal hari ini per produk.
+           Menggunakan updateOrCreate — aman dipanggil ulang jika ada koreksi.
+           Item dengan qty = 0 akan dilewati (tidak disimpan).
+--------------------------------------------------------------------------------
+REQUEST BODY:
+  outlet_id          integer  required  ID outlet (auto-fill untuk kasir)
+  tanggal            date     required  Tanggal opening (format YYYY-MM-DD)
+  items              array    required  Array produk
+  items.*.product_id integer  required  ID produk
+  items.*.qty        integer  required  Qty opening stok (0 = lewati)
+  items.*.keterangan string   optional  Catatan
+
+RESPONSE 201:
+{
+  "message": "Opening stok berhasil disimpan."
+}
+
+--------------------------------------------------------------------------------
+[POST] /api/stock/in
+Auth    : Bearer Token
+Deskripsi: Mencatat penambahan stok masuk (kiriman supplier / restok).
+           Membuat record StockMovement dengan type = "in".
+--------------------------------------------------------------------------------
+REQUEST BODY:
+  outlet_id  integer  required  ID outlet (auto-fill untuk kasir)
+  product_id integer  required  ID produk
+  tanggal    date     required  Tanggal masuk (format YYYY-MM-DD)
+  qty        integer  required  Jumlah stok masuk (min 1)
+  keterangan string   optional  Catatan (contoh: "Kiriman supplier")
+
+RESPONSE 201:
+{
+  "message": "Tambah stok berhasil disimpan.",
+  "id": 15
+}
+
+--------------------------------------------------------------------------------
+[POST] /api/stock/waste
+Auth    : Bearer Token
+Deskripsi: Mencatat stok yang terbuang, rusak, atau tidak layak jual.
+           Membuat record StockMovement dengan type = "waste".
+--------------------------------------------------------------------------------
+REQUEST BODY:
+  outlet_id  integer  required  ID outlet (auto-fill untuk kasir)
+  product_id integer  required  ID produk
+  tanggal    date     required  Tanggal (format YYYY-MM-DD)
+  qty        integer  required  Jumlah yang dibuang (min 1)
+  keterangan string   optional  Catatan (contoh: "Basi", "Jatuh")
+
+RESPONSE 201:
+{
+  "message": "Waste berhasil disimpan.",
+  "id": 16
+}
+
+--------------------------------------------------------------------------------
+[GET] /api/stock/history
+Auth    : Bearer Token
+Deskripsi: Riwayat pergerakan stok dengan filter opsional.
+           Dibatasi 100 record terbaru diurutkan dari terbaru.
+--------------------------------------------------------------------------------
+QUERY PARAMS:
+  outlet_id  integer  required  ID outlet
+  type       string   optional  Filter: opening / in / waste
+  product_id integer  optional  Filter produk tertentu
+  date_from  date     optional  Dari tanggal
+  date_to    date     optional  Sampai tanggal
+
+RESPONSE 200:
+[
+  {
+    "id": 15,
+    "type": "in",
+    "product": "Ayam Geprek",
+    "qty": 20,
+    "tanggal": "2024-12-01",
+    "keterangan": "Kiriman supplier",
+    "user": "Budi Kasir"
+  }
+]
+
+================================================================================
+7. PENGELUARAN
+================================================================================
+
+Kategori pengeluaran yang valid:
+  operasional | bahan_baku | gaji | utilitas | promosi | peralatan | lainnya
+
+--------------------------------------------------------------------------------
+[GET] /api/expenses
+Auth    : Bearer Token
+Deskripsi: Daftar pengeluaran di outlet untuk tanggal yang dipilih.
+--------------------------------------------------------------------------------
+QUERY PARAMS:
+  outlet_id  integer  required  ID outlet
+  tanggal    date     optional  Tanggal (default: hari ini)
+  kategori   string   optional  Filter kategori
+
+RESPONSE 200:
+{
+  "tanggal": "2024-12-01",
+  "total": 75000,
+  "expenses": [
+    {
+      "id": 1,
+      "tanggal": "2024-12-01",
+      "kategori": "operasional",
+      "keterangan": "Beli sabun cuci piring",
+      "jumlah": 25000,
+      "user": "Budi Kasir"
+    }
+  ],
+  "kategori_list": {
+    "operasional": "Operasional",
+    "bahan_baku": "Bahan Baku",
+    "gaji": "Gaji / Honor",
+    "utilitas": "Listrik / Air / Gas",
+    "promosi": "Promosi / Iklan",
+    "peralatan": "Peralatan",
+    "lainnya": "Lainnya"
+  }
+}
+
+--------------------------------------------------------------------------------
+[POST] /api/expenses
+Auth    : Bearer Token
+Deskripsi: Mencatat pengeluaran baru untuk outlet.
+--------------------------------------------------------------------------------
+REQUEST BODY:
+  outlet_id  integer  required  ID outlet (auto-fill untuk kasir)
+  tanggal    date     required  Tanggal pengeluaran
+  kategori   string   required  Lihat daftar kategori valid di atas
+  keterangan string   optional  Deskripsi pengeluaran
+  jumlah     numeric  required  Nominal rupiah (min 1)
+
+RESPONSE 201:
+{
+  "message": "Pengeluaran berhasil disimpan.",
+  "id": 5
+}
+
+--------------------------------------------------------------------------------
+[PUT] /api/expenses/{expense}
+Auth    : Bearer Token
+Deskripsi: Memperbarui data pengeluaran yang sudah ada.
+           Hanya bisa mengedit pengeluaran di outlet yang bisa diakses.
+--------------------------------------------------------------------------------
+URL PARAMS:
+  expense  integer  required  ID pengeluaran
+
+REQUEST BODY:
+  tanggal    date     required  Tanggal pengeluaran
+  kategori   string   required  Kategori
+  keterangan string   optional  Deskripsi
+  jumlah     numeric  required  Nominal rupiah
+
+RESPONSE 200:
+{
+  "message": "Pengeluaran berhasil diperbarui."
+}
+
+--------------------------------------------------------------------------------
+[DELETE] /api/expenses/{expense}
+Auth    : Bearer Token
+Deskripsi: Menghapus catatan pengeluaran.
+--------------------------------------------------------------------------------
+URL PARAMS:
+  expense  integer  required  ID pengeluaran
+
+RESPONSE 200:
+{
+  "message": "Pengeluaran berhasil dihapus."
+}
+
+================================================================================
+8. ANTRIAN ORDER
+================================================================================
+
+Order dibuat oleh PELANGGAN dari halaman publik /order/{slug}.
+API ini hanya untuk membaca dan mengelola status order yang masuk.
+
+Alur status order:
+  pending_payment → (bayar) → pending → processing → ready → completed
+                                                           ↘ cancelled (kapan saja)
+
+--------------------------------------------------------------------------------
+[GET] /api/orders
+Auth    : Bearer Token
+Deskripsi: Daftar antrian order di outlet.
+           Status "active" menampilkan: pending, processing, ready.
+--------------------------------------------------------------------------------
+QUERY PARAMS:
+  outlet_id  integer  required  ID outlet
+  status     string   optional  active (default) / all / pending / processing /
+                                ready / completed / cancelled
+
+RESPONSE 200:
+{
+  "stats": {
+    "pending": 2,
+    "processing": 1,
+    "ready": 0
+  },
+  "orders": [
+    {
+      "id": 1,
+      "order_number": "ORD-20241201-001",
+      "customer_name": "Andi",
+      "customer_phone": "08123456789",
+      "catatan": "Pedas banget",
+      "subtotal": 30000,
+      "order_status": "pending",
+      "status_label": "Menunggu",
+      "next_status": "processing",
+      "next_label": "Proses",
+      "created_at": "2024-12-01T10:00:00.000Z",
+      "items": [
+        {
+          "id": 1,
+          "nama_produk": "Ayam Geprek",
+          "qty": 2,
+          "harga_satuan": 15000,
+          "subtotal": 30000
+        }
+      ]
+    }
+  ]
+}
+
+--------------------------------------------------------------------------------
+[GET] /api/orders/poll
+Auth    : Bearer Token
+Deskripsi: Endpoint ringan untuk polling order baru.
+           Panggil setiap 10–30 detik untuk deteksi order masuk.
+           Kembalikan "new_count" > 0 jika ada order baru sejak "since".
+--------------------------------------------------------------------------------
+QUERY PARAMS:
+  outlet_id  integer   required  ID outlet
+  since      datetime  optional  ISO timestamp terakhir poll (format: 2024-12-01T10:00:00Z)
+
+RESPONSE 200:
+{
+  "new_count": 1,
+  "pending": 3,
+  "now": "2024-12-01T10:05:00.000Z"
+}
+
+CARA PAKAI: Simpan nilai "now" dari response, kirim sebagai "since" di poll berikutnya.
+
+--------------------------------------------------------------------------------
+[POST] /api/orders/{order}/advance
+Auth    : Bearer Token
+Deskripsi: Memajukan status order ke tahap berikutnya.
+           pending → processing → ready → completed
+           Timestamp otomatis diisi: processed_at, ready_at, completed_at
+--------------------------------------------------------------------------------
+URL PARAMS:
+  order  integer  required  ID order
+
+RESPONSE 200:
+{
+  "message": "Order ORD-20241201-001 → Diproses",
+  "order": { ...data order terbaru... }
+}
+
+ERROR 422: {"message": "Status order tidak dapat diubah."} (jika sudah completed/cancelled)
+
+--------------------------------------------------------------------------------
+[POST] /api/orders/{order}/cancel
+Auth    : Bearer Token
+Deskripsi: Membatalkan order. Tidak bisa membatalkan yang sudah completed.
+--------------------------------------------------------------------------------
+URL PARAMS:
+  order  integer  required  ID order
+
+RESPONSE 200:
+{
+  "message": "Order ORD-20241201-001 dibatalkan."
+}
+
+ERROR 422: {"message": "Order sudah selesai atau dibatalkan."}
+
+================================================================================
+9. CLOSING HARIAN
+================================================================================
+
+--------------------------------------------------------------------------------
+[GET] /api/closing
+Auth    : Bearer Token
+Deskripsi: Ringkasan lengkap akhir hari untuk outlet.
+           Mencakup: omzet, jumlah transaksi, total pengeluaran,
+           laba kotor, breakdown per metode bayar, pengeluaran per kategori,
+           dan rekap stok setiap produk (opening/in/waste/sold/akhir).
+--------------------------------------------------------------------------------
+QUERY PARAMS:
+  outlet_id  integer  required  ID outlet
+  tanggal    date     optional  Tanggal closing (default: hari ini)
+
+RESPONSE 200:
+{
+  "tanggal": "2024-12-01",
+  "omzet": 500000,
+  "total_transaksi": 15,
+  "total_expense": 75000,
+  "laba_kotor": 425000,
+  "per_metode": {
+    "tunai": {"jumlah": 10, "total": 350000},
+    "qris":  {"jumlah": 5,  "total": 150000}
+  },
+  "expense_per_kategori": {
+    "operasional": 50000,
+    "bahan_baku": 25000
+  },
+  "stock_summary": [
+    {
+      "product_id": 1,
+      "nama": "Ayam Geprek",
+      "category": "Makanan",
+      "opening": 20,
+      "in": 5,
+      "waste": 1,
+      "sold": 15,
+      "akhir": 9
+    }
+  ]
+}
+
+CATATAN: stock_summary hanya menampilkan produk yang ada aktivitas hari itu
+         (opening > 0 ATAU in > 0 ATAU waste > 0 ATAU sold > 0).
+CATATAN: laba_kotor = omzet - total_expense (belum dikurangi HPP/COGS).
+
+================================================================================
+10. KELOLA PRODUK
+================================================================================
+
+Berbeda dengan GET /api/products (yang hanya untuk POS),
+endpoint ini untuk CRUD produk dari halaman manajemen owner/kasir.
+
+--------------------------------------------------------------------------------
+[GET] /api/manage/products
+Auth    : Bearer Token
+Deskripsi: Semua produk di outlet (aktif dan nonaktif) untuk halaman kelola produk.
+--------------------------------------------------------------------------------
+QUERY PARAMS:
+  outlet_id  integer  required  ID outlet
+  q          string   optional  Cari berdasarkan nama atau kode produk
+
+RESPONSE 200:
+{
+  "products": [
+    {
+      "id": 1,
+      "kode": "PRD-001",
+      "nama": "Ayam Geprek",
+      "harga": 15000,
+      "satuan": "porsi",
+      "is_active": true,
+      "category_id": 1,
+      "category": "Makanan",
+      "foto": "https://yourdomain.com/storage/products/ayam.jpg",
+      "deskripsi": "Ayam geprek sambal bawang"
+    }
+  ],
+  "categories": [
+    {"id": 1, "nama": "Makanan"},
+    {"id": 2, "nama": "Minuman"}
+  ]
+}
+
+--------------------------------------------------------------------------------
+[POST] /api/manage/products
+Auth    : Bearer Token
+Content-Type: multipart/form-data  (WAJIB jika ada upload foto)
+Deskripsi: Membuat produk baru. Jika ada upload foto gunakan multipart/form-data.
+--------------------------------------------------------------------------------
+REQUEST BODY:
+  outlet_id   integer  required  ID outlet
+  nama        string   required  Nama produk (max 200 karakter)
+  harga_jual  numeric  required  Harga jual (min 0)
+  satuan      string   required  Satuan: porsi/pcs/kg/liter/dll (max 30)
+  category_id integer  optional  ID kategori
+  kode        string   optional  Kode SKU (max 50 karakter)
+  deskripsi   string   optional  Deskripsi produk
+  is_active   boolean  optional  Status aktif (default: true)
+  gambar      file     optional  Foto produk (jpg/png/gif, max 2MB)
+
+RESPONSE 201:
+{
+  "message": "Produk \"Ayam Geprek Spesial\" berhasil ditambahkan.",
+  "id": 5
+}
+
+--------------------------------------------------------------------------------
+[PUT] /api/manage/products/{product}
+Auth    : Bearer Token
+Content-Type: multipart/form-data  (jika ada update foto)
+Deskripsi: Memperbarui produk. Kirim hapus_gambar=1 untuk hapus foto.
+--------------------------------------------------------------------------------
+URL PARAMS:
+  product  integer  required  ID produk
+
+REQUEST BODY:
+  nama        string   required  Nama produk
+  harga_jual  numeric  required  Harga jual
+  satuan      string   required  Satuan
+  category_id integer  optional  ID kategori
+  kode        string   optional  Kode SKU
+  deskripsi   string   optional  Deskripsi
+  is_active   boolean  optional  Status aktif
+  gambar      file     optional  Foto baru (menggantikan foto lama)
+  hapus_gambar boolean  optional  Set 1/true untuk menghapus foto tanpa upload baru
+
+RESPONSE 200:
+{
+  "message": "Produk \"Ayam Geprek Spesial\" berhasil diperbarui."
+}
+
+--------------------------------------------------------------------------------
+[DELETE] /api/manage/products/{product}
+Auth    : Bearer Token
+Deskripsi: Menghapus produk dan file fotonya dari storage.
+--------------------------------------------------------------------------------
+URL PARAMS:
+  product  integer  required  ID produk
+
+RESPONSE 200:
+{
+  "message": "Produk \"Ayam Geprek Spesial\" berhasil dihapus."
+}
+
+================================================================================
+11. KELOLA USER
+================================================================================
+
+Batasan akses:
+  - Owner : hanya bisa kelola user di outlet miliknya, role hanya "kasir"
+  - Admin : bisa kelola semua user, semua role
+  - Kasir : tidak memiliki akses ke endpoint ini
+
+--------------------------------------------------------------------------------
+[GET] /api/users
+Auth    : Bearer Token
+Deskripsi: Daftar user sesuai scope akses caller.
+           Owner melihat staff outletnya + dirinya sendiri.
+--------------------------------------------------------------------------------
+QUERY PARAMS:
+  q     string  optional  Cari nama atau email
+  role  string  optional  Filter: kasir / owner / admin
+
+RESPONSE 200:
+{
+  "users": [
+    {
+      "id": 2,
+      "name": "Budi Kasir",
+      "email": "budi@outlet.com",
+      "outlet_id": 1,
+      "roles": ["kasir"],
+      "is_active": true,
+      "jabatan": "Kasir",
+      "no_hp": "08123456789"
+    }
+  ],
+  "available_roles": ["kasir"]
+}
+
+CATATAN: "available_roles" berisi role yang boleh diassign oleh caller.
+         Owner hanya mendapat ["kasir"].
+
+--------------------------------------------------------------------------------
+[POST] /api/users
+Auth    : Bearer Token
+Deskripsi: Membuat user baru. Email otomatis terverifikasi (tidak perlu konfirmasi email).
+--------------------------------------------------------------------------------
+REQUEST BODY:
+  name       string  required  Nama lengkap (max 255)
+  email      string  required  Email unik (max 255)
+  password   string  required  Password (min 8 karakter)
+  role       string  optional  Role yang diassign (kasir/owner/admin)
+  outlet_id  integer optional  ID outlet default user
+  jabatan    string  optional  Jabatan (max 100)
+  no_hp      string  optional  Nomor HP (max 20)
+
+RESPONSE 201:
+{
+  "message": "User \"Budi Kasir\" berhasil ditambahkan.",
+  "id": 10
+}
+
+ERROR 403: {"message": "Tidak punya akses ke outlet ini."}
+           (Owner mencoba assign user ke outlet bukan miliknya)
+
+--------------------------------------------------------------------------------
+[PUT] /api/users/{user}
+Auth    : Bearer Token
+Deskripsi: Memperbarui data user. Password hanya diubah jika field "password" diisi.
+           Role hanya bisa diubah oleh user dengan permission "user.assign".
+--------------------------------------------------------------------------------
+URL PARAMS:
+  user  integer  required  ID user
+
+REQUEST BODY:
+  name       string  required  Nama lengkap
+  email      string  required  Email (harus unik kecuali milik user ini sendiri)
+  password   string  optional  Password baru (opsional, min 8 karakter)
+  role       string  optional  Role baru
+  outlet_id  integer optional  Outlet
+  jabatan    string  optional  Jabatan
+  no_hp      string  optional  Nomor HP
+
+RESPONSE 200:
+{
+  "message": "User \"Budi Kasir\" berhasil diperbarui."
+}
+
+ERROR 403: {"message": "Tidak punya akses ke user ini."}
+
+--------------------------------------------------------------------------------
+[DELETE] /api/users/{user}
+Auth    : Bearer Token
+Deskripsi: Menghapus user. Proteksi: tidak bisa hapus diri sendiri atau admin.
+--------------------------------------------------------------------------------
+URL PARAMS:
+  user  integer  required  ID user
+
+RESPONSE 200:
+{
+  "message": "User \"Budi Kasir\" berhasil dihapus."
+}
+
+ERROR 422: {"message": "Anda tidak dapat menghapus akun Anda sendiri."}
+ERROR 422: {"message": "User dengan role Admin tidak dapat dihapus."}
+ERROR 403: {"message": "Tidak punya akses ke user ini."}
+
+================================================================================
+12. LAPORAN
+================================================================================
+
+Kasir hanya melihat transaksi miliknya sendiri di laporan.
+Kasir tidak melihat data pengeluaran di laporan laba rugi.
+
+--------------------------------------------------------------------------------
+[GET] /api/reports/sales
+Auth    : Bearer Token
+Deskripsi: Laporan penjualan harian dalam rentang tanggal.
+           Mencakup total omzet, jumlah transaksi, per hari, dan per produk.
+--------------------------------------------------------------------------------
+QUERY PARAMS:
+  outlet_id  integer  required  ID outlet
+  date_from  date     optional  Dari tanggal (default: hari ini)
+  date_to    date     optional  Sampai tanggal (default: hari ini)
+
+RESPONSE 200:
+{
+  "date_from": "2024-12-01",
+  "date_to": "2024-12-31",
+  "total_omzet": 5000000,
+  "total_transaksi": 150,
+  "per_hari": [
+    {
+      "tanggal": "2024-12-01",
+      "jumlah": 15,
+      "omzet": 500000
+    }
+  ],
+  "per_produk": [
+    {
+      "nama": "Ayam Geprek",
+      "total_qty": 120,
+      "total_subtotal": 1800000
+    }
+  ]
+}
+
+CATATAN: "per_produk" diurutkan dari yang paling tinggi omzetnya.
+
+--------------------------------------------------------------------------------
+[GET] /api/reports/profit-loss
+Auth    : Bearer Token
+Deskripsi: Laporan laba rugi per hari dalam rentang tanggal.
+           Kasir tidak melihat data pengeluaran (expense = 0, expense_per_kategori = []).
+           Default rentang: awal bulan ini sampai hari ini.
+--------------------------------------------------------------------------------
+QUERY PARAMS:
+  outlet_id  integer  required  ID outlet
+  date_from  date     optional  Dari tanggal (default: awal bulan ini)
+  date_to    date     optional  Sampai tanggal (default: hari ini)
+
+RESPONSE 200:
+{
+  "date_from": "2024-12-01",
+  "date_to": "2024-12-31",
+  "total_omzet": 5000000,
+  "total_expense": 750000,
+  "total_laba": 4250000,
+  "per_hari": [
+    {
+      "tanggal": "2024-12-01",
+      "omzet": 500000,
+      "expense": 75000,
+      "laba": 425000
+    }
+  ],
+  "expense_per_kategori": [
+    {"kategori": "bahan_baku", "total": 400000},
+    {"kategori": "operasional", "total": 350000}
+  ]
+}
+
+================================================================================
+13. ERROR RESPONSES
+================================================================================
+
+Semua error response mengikuti format JSON standar Laravel.
+
+STATUS 401 — Unauthenticated:
+{
+  "message": "Unauthenticated."
+}
+Penyebab: Token tidak dikirim, token tidak valid, atau token sudah dihapus (logout).
+
+STATUS 403 — Forbidden:
+{
+  "message": "Tidak punya akses ke outlet ini."
+}
+Penyebab: User mencoba akses data di luar scope yang diizinkan.
+
+STATUS 404 — Not Found:
+{
+  "message": "No query results for model [...]"
+}
+Penyebab: ID tidak ditemukan di database.
+
+STATUS 422 — Validation Error:
+{
+  "message": "The given data was invalid.",
+  "errors": {
+    "outlet_id": ["The outlet id field is required."],
+    "items.0.qty": ["The items.0.qty must be at least 1."]
+  }
+}
+Penyebab: Request body/query params tidak memenuhi aturan validasi.
+
+STATUS 500 — Server Error:
+{
+  "message": "Gagal membuat sesi pembayaran: ..."
+}
+Penyebab: Error pihak ketiga (Midtrans, dll) atau bug server.
+
+================================================================================
+14. CATATAN ROLE & PERMISSION
+================================================================================
+
+ROLE: kasir
+  - outlet_id terikat ke 1 outlet
+  - outlet_id di-auto-fill di setiap request
+  - Di laporan hanya melihat transaksi miliknya
+  - Tidak bisa melihat pengeluaran di laporan laba rugi
+  - Tidak bisa kelola user
+
+ROLE: owner
+  - Bisa akses semua outlet miliknya
+  - Wajib kirim outlet_id di setiap request
+  - Bisa kelola produk, user (kasir saja), pengeluaran di outlet miliknya
+  - Bisa lihat semua laporan outlet miliknya
+
+ROLE: admin
+  - Akses penuh ke semua data
+  - Biasanya pakai web, bukan mobile
+  - Bisa assign semua role ke user
+
+PERMISSION YANG RELEVAN UNTUK MOBILE:
+  transaction.create  - membuat transaksi POS
+  expense.create      - mencatat pengeluaran
+  stock.create        - input opening/in/waste stok
+  product.read        - melihat produk
+  product.create      - tambah/edit/hapus produk
+  user.read           - melihat daftar user
+  user.create         - tambah user
+  user.assign         - mengubah role user
+  order.read          - melihat antrian order
+  report.read         - akses laporan
+
+================================================================================
+15. CONTOH ALUR PENGGUNAAN
+================================================================================
+
+--- ALUR 1: Buka Sesi Kasir (Pagi Hari) ---
+1. POST /api/auth/login          → dapatkan token
+2. GET  /api/outlets             → tampilkan pilihan outlet
+3. GET  /api/stock/opening       → tampilkan form opening stok
+4. POST /api/stock/opening       → simpan stok awal
+5. GET  /api/transactions/config → cek metode bayar yang aktif
+
+--- ALUR 2: Proses Transaksi Tunai ---
+1. GET  /api/products            → tampilkan menu di POS
+2. (user pilih item + input bayar)
+3. POST /api/transactions        → simpan transaksi (metode_bayar: "tunai")
+4. GET  /api/transactions/{id}   → ambil data struk untuk dicetak
+
+--- ALUR 3: Proses Transaksi Gateway (Midtrans) ---
+1. GET  /api/products            → tampilkan menu
+2. POST /api/transactions/snap-token → buat sesi Snap Midtrans
+3. (tampilkan Snap SDK dengan token, tunggu onSuccess)
+4. POST /api/transactions        → simpan dengan metode_bayar: "gateway",
+                                   payment_ref: order_id dari snap-token
+
+--- ALUR 4: Kelola Stok ---
+1. GET  /api/stock               → lihat stok saat ini
+2. POST /api/stock/in            → catat stok masuk
+3. POST /api/stock/waste         → catat barang rusak/terbuang
+4. GET  /api/stock/history       → lihat riwayat gerakan
+
+--- ALUR 5: Antrian Order ---
+1. GET  /api/orders?status=active  → tampilkan antrian aktif
+2. (loop polling setiap 15 detik)
+   GET  /api/orders/poll           → cek order baru
+3. POST /api/orders/{id}/advance   → ubah ke "processing"
+4. POST /api/orders/{id}/advance   → ubah ke "ready"
+5. POST /api/orders/{id}/advance   → ubah ke "completed"
+
+--- ALUR 6: Closing Harian ---
+1. GET  /api/closing             → tampilkan ringkasan hari ini
+2. (cetak/simpan laporan closing)
+
+--- ALUR 7: Laporan Bulanan ---
+1. GET  /api/reports/profit-loss?date_from=2024-12-01&date_to=2024-12-31
+2. GET  /api/reports/sales?date_from=2024-12-01&date_to=2024-12-31
+
+================================================================================
+RINGKASAN SEMUA ENDPOINT (35 Total)
+================================================================================
+
+NO  METHOD  PATH                              DESKRIPSI
+--  ------  --------------------------------  ----------------------------------
+1   POST    /api/auth/login                   Login — dapat token
+2   POST    /api/auth/logout                  Logout — hapus token
+3   GET     /api/auth/me                      Info user login
+4   GET     /api/outlets                      Daftar outlet
+5   GET     /api/products                     Produk aktif + stok (POS)
+6   GET     /api/transactions/config          Konfigurasi pembayaran outlet
+7   POST    /api/transactions/snap-token      Generate Snap Token Midtrans
+8   POST    /api/transactions                 Simpan transaksi
+9   GET     /api/transactions/{id}            Detail transaksi (struk)
+10  GET     /api/transactions                 Riwayat transaksi
+11  GET     /api/stock                        Stok saat ini
+12  GET     /api/stock/opening                Form opening stok
+13  POST    /api/stock/opening                Simpan opening stok
+14  POST    /api/stock/in                     Tambah stok masuk
+15  POST    /api/stock/waste                  Catat waste/barang rusak
+16  GET     /api/stock/history                Riwayat pergerakan stok
+17  GET     /api/expenses                     Daftar pengeluaran
+18  POST    /api/expenses                     Catat pengeluaran
+19  PUT     /api/expenses/{id}                Update pengeluaran
+20  DELETE  /api/expenses/{id}                Hapus pengeluaran
+21  GET     /api/orders                       Daftar antrian order
+22  GET     /api/orders/poll                  Polling order baru
+23  POST    /api/orders/{id}/advance          Advance status order
+24  POST    /api/orders/{id}/cancel           Batalkan order
+25  GET     /api/closing                      Closing harian
+26  GET     /api/manage/products              Daftar produk (kelola)
+27  POST    /api/manage/products              Tambah produk
+28  PUT     /api/manage/products/{id}         Update produk
+29  DELETE  /api/manage/products/{id}         Hapus produk
+30  GET     /api/reports/sales                Laporan penjualan
+31  GET     /api/reports/profit-loss          Laporan laba rugi
+32  GET     /api/users                        Daftar user
+33  POST    /api/users                        Tambah user
+34  PUT     /api/users/{id}                   Update user
+35  DELETE  /api/users/{id}                   Hapus user
+
+================================================================================
+FIN — Pabalu Mobile API Documentation v1.0
+================================================================================

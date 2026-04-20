@@ -28,6 +28,8 @@ class RoleController extends Controller
             'Order Online'      => ['order.read','order.manage'],
             'Log & Pengaturan'  => ['log.read','setting.read','setting.update'],
             'Panduan'           => ['guide.read','guide.update'],
+            'Billing'           => ['billing.read','billing.manage'],
+            'Dokumentasi API'   => ['api.docs'],
         ];
     }
 

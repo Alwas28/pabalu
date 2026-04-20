@@ -124,6 +124,13 @@
             </td>
             <td>
               <div style="display:flex;gap:6px;justify-content:flex-end">
+                @if($outlet->slug)
+                <button type="button"
+                  onclick="openQR('{{ $outlet->slug }}','{{ addslashes($outlet->nama) }}','{{ $outlet->alamat ?? '' }}')"
+                  class="btn" style="padding:6px 10px;font-size:12px" title="Print QR Code Order">
+                  <i class="fa-solid fa-qrcode"></i>
+                </button>
+                @endif
                 @can('outlet.update')
                 <a href="{{ route('outlets.edit', $outlet) }}"
                   class="btn" style="padding:6px 12px;font-size:12px;text-decoration:none">
@@ -181,6 +188,98 @@
     @endif
   </div>
 
+  {{-- QR Code Modal --}}
+  <div id="qr-backdrop"
+    style="display:none;position:fixed;inset:0;z-index:9100;background:rgba(0,0,0,.7);
+           backdrop-filter:blur(6px);align-items:center;justify-content:center;padding:20px;
+           opacity:0;transition:opacity .2s">
+    <div id="qr-box"
+      style="background:var(--surface);border:1px solid var(--border);border-radius:20px;
+             width:100%;max-width:460px;box-shadow:0 32px 80px rgba(0,0,0,.6);
+             transform:scale(.94) translateY(12px);transition:transform .25s,opacity .25s;opacity:0;overflow:hidden">
+
+      {{-- Modal header --}}
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--border)">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="width:34px;height:34px;border-radius:10px;background:var(--ac-lt);color:var(--ac);
+                      display:grid;place-items:center;font-size:15px">
+            <i class="fa-solid fa-qrcode"></i>
+          </div>
+          <div>
+            <div style="font-weight:700;font-size:14px;color:var(--text)">QR Code Menu Order</div>
+            <div style="font-size:11.5px;color:var(--muted)" id="qr-outlet-name-sub"></div>
+          </div>
+        </div>
+        <button onclick="closeQR()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px;padding:4px;line-height:1">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      {{-- Preview card --}}
+      <div style="padding:24px;display:flex;justify-content:center">
+        <div id="qr-print-area"
+          style="background:#ffffff;border-radius:16px;padding:28px 24px;width:300px;
+                 box-shadow:0 4px 24px rgba(0,0,0,.12);text-align:center;font-family:'Plus Jakarta Sans',sans-serif">
+
+          {{-- Logo / brand --}}
+          <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:20px">
+            <div style="width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,#f59e0b,#ef4444);
+                        display:grid;place-items:center">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="white">
+                <path d="M3 9h18v10a2 2 0 01-2 2H5a2 2 0 01-2-2V9zm0 0V7a2 2 0 012-2h2M9 5V3m6 2V3m6 4H3"/>
+              </svg>
+            </div>
+            <span style="font-size:15px;font-weight:800;color:#0f1117;letter-spacing:-.5px">Pabalu</span>
+          </div>
+
+          {{-- QR Code --}}
+          <div style="display:flex;justify-content:center;margin-bottom:18px">
+            <div style="border:3px solid #f59e0b;border-radius:12px;padding:10px;background:#fff;display:inline-block">
+              <div id="qr-canvas"></div>
+            </div>
+          </div>
+
+          {{-- Teks outlet --}}
+          <div id="qr-outlet-name"
+            style="font-size:16px;font-weight:800;color:#0f1117;margin-bottom:4px;letter-spacing:-.3px"></div>
+          <div id="qr-outlet-addr"
+            style="font-size:11px;color:#64748b;margin-bottom:16px;line-height:1.4"></div>
+
+          {{-- Instruksi --}}
+          <div style="background:#fef9ec;border:1px solid #fde68a;border-radius:10px;padding:10px 12px;margin-bottom:14px">
+            <div style="font-size:13px;font-weight:700;color:#92400e;margin-bottom:3px">
+              📱 Scan untuk Pesan
+            </div>
+            <div style="font-size:11px;color:#78350f;line-height:1.5">
+              Arahkan kamera HP ke QR Code<br>untuk melihat menu &amp; pesan online
+            </div>
+          </div>
+
+          {{-- URL teks --}}
+          <div id="qr-url-text"
+            style="font-size:10px;color:#94a3b8;word-break:break-all;font-family:monospace;
+                   background:#f8fafc;border-radius:6px;padding:6px 8px"></div>
+
+          {{-- Footer --}}
+          <div style="margin-top:14px;padding-top:12px;border-top:1px dashed #e2e8f0;
+                      font-size:10px;color:#cbd5e1">
+            Powered by <strong style="color:#f59e0b">Pabalu</strong> — Sistem Kasir UMKM
+          </div>
+        </div>
+      </div>
+
+      {{-- Actions --}}
+      <div style="padding:0 24px 24px;display:flex;gap:10px">
+        <button onclick="closeQR()" class="btn" style="flex:1;justify-content:center;font-size:13px;padding:10px">
+          <i class="fa-solid fa-xmark"></i> Tutup
+        </button>
+        <button onclick="printQR()" class="btn btn-primary" style="flex:2;justify-content:center;font-size:13px;padding:10px">
+          <i class="fa-solid fa-print"></i> Print QR Code
+        </button>
+      </div>
+    </div>
+  </div>
+
   {{-- Delete Dialog --}}
   <div id="confirm-backdrop"
     style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.6);
@@ -219,6 +318,103 @@
   </div>
 
   @push('scripts')
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script>
+  /* ══ QR Code Modal ══════════════════════════════════════ */
+  var qrInstance = null;
+
+  function openQR(slug, nama, alamat) {
+    var url = '{{ url('/order') }}/' + slug;
+
+    document.getElementById('qr-outlet-name-sub').textContent = nama;
+    document.getElementById('qr-outlet-name').textContent     = nama;
+    document.getElementById('qr-outlet-addr').textContent     = alamat || '';
+    document.getElementById('qr-url-text').textContent        = url;
+
+    // Hapus QR lama
+    var canvas = document.getElementById('qr-canvas');
+    canvas.innerHTML = '';
+    if (qrInstance) { qrInstance.clear(); qrInstance = null; }
+
+    qrInstance = new QRCode(canvas, {
+      text          : url,
+      width         : 200,
+      height        : 200,
+      colorDark     : '#0f1117',
+      colorLight    : '#ffffff',
+      correctLevel  : QRCode.CorrectLevel.H,
+    });
+
+    var backdrop = document.getElementById('qr-backdrop');
+    var box      = document.getElementById('qr-box');
+    backdrop.style.display = 'flex';
+    requestAnimationFrame(function(){ requestAnimationFrame(function(){
+      backdrop.style.opacity = '1';
+      box.style.opacity      = '1';
+      box.style.transform    = 'scale(1) translateY(0)';
+    }); });
+  }
+
+  function closeQR() {
+    var backdrop = document.getElementById('qr-backdrop');
+    var box      = document.getElementById('qr-box');
+    backdrop.style.opacity = '0';
+    box.style.opacity      = '0';
+    box.style.transform    = 'scale(.94) translateY(12px)';
+    setTimeout(function(){ backdrop.style.display = 'none'; }, 220);
+  }
+
+  function printQR() {
+    var area    = document.getElementById('qr-print-area').outerHTML;
+    var appName = '{{ \App\Models\Setting::get('app_name', config('app.name')) }}';
+    var win     = window.open('', '_blank', 'width=420,height=680');
+    win.document.write(`<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <title>QR Code — ` + document.getElementById('qr-outlet-name').textContent + `</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{
+      font-family:'Plus Jakarta Sans',sans-serif;
+      background:#f8fafc;
+      display:flex;align-items:center;justify-content:center;
+      min-height:100vh;padding:24px;
+    }
+    @media print{
+      body{background:#fff;padding:0}
+      .no-print{display:none!important}
+      @page{margin:10mm;size:A5 portrait}
+    }
+  </style>
+</head>
+<body>
+  <div>` + area + `</div>
+  <div class="no-print" style="margin-top:20px;text-align:center">
+    <button onclick="window.print()"
+      style="background:#f59e0b;color:#fff;border:none;border-radius:10px;
+             padding:12px 32px;font-size:14px;font-weight:700;cursor:pointer;
+             font-family:'Plus Jakarta Sans',sans-serif">
+      🖨️ Print
+    </button>
+    <button onclick="window.close()"
+      style="background:#e2e8f0;color:#475569;border:none;border-radius:10px;
+             padding:12px 20px;font-size:14px;font-weight:600;cursor:pointer;margin-left:10px;
+             font-family:'Plus Jakarta Sans',sans-serif">
+      Tutup
+    </button>
+  </div>
+</body>
+</html>`);
+    win.document.close();
+  }
+
+  document.getElementById('qr-backdrop').addEventListener('click', function(e){
+    if (e.target === this) closeQR();
+  });
+  document.addEventListener('keydown', function(e){ if(e.key==='Escape') closeQR(); });
+  </script>
   <script>
   function askDelete(id, nama, produkCount) {
     var backdrop = document.getElementById('confirm-backdrop');
