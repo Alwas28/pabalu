@@ -4,7 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="csrf-token" content="{{ csrf_token() }}">
+<meta name="robots" content="noindex, nofollow">
 <title>{{ $title }} — {{ \App\Models\Setting::get('app_name', config('app.name', 'Pabalu')) }}</title>
+<link rel="icon" type="image/x-icon" href="{{ asset('img/Logo.ico') }}">
+<link rel="canonical" href="{{ url()->current() }}">
 
 <link href="https://fonts.googleapis.com/css2?family=Clash+Display:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
@@ -16,7 +19,7 @@ body{font-family:'Plus Jakarta Sans',sans-serif;transition:background .25s,color
 .font-display,h1,h2,h3,h4{font-family:'Clash Display',sans-serif}
 
 /* ════ ACCENT VARS ════ */
-:root{--ac:#f59e0b;--ac2:#ef4444;--ac-rgb:245,158,11;--ac-lt:rgba(245,158,11,.14);--ac-lt2:rgba(245,158,11,.08)}
+:root{--ac:#E8000D;--ac2:#C0000A;--ac-rgb:232,0,13;--ac-lt:rgba(232,0,13,.14);--ac-lt2:rgba(232,0,13,.08)}
 
 /* ════ DARK THEME (default) ════ */
 body{
@@ -289,8 +292,8 @@ textarea.f-input{resize:vertical;min-height:80px}
 <aside id="sb">
   {{-- Logo --}}
   <div style="display:flex;align-items:center;gap:12px;padding:18px 20px;border-bottom:1px solid var(--border);flex-shrink:0">
-    <div class="a-grad" style="width:38px;height:38px;border-radius:11px;display:grid;place-items:center;flex-shrink:0">
-      <i class="fa-solid fa-store" style="color:#fff;font-size:16px"></i>
+    <div style="width:38px;height:38px;border-radius:11px;overflow:hidden;flex-shrink:0">
+      <img src="{{ asset('img/Logo Pabalu.png') }}" alt="Pabalu" style="width:100%;height:100%;object-fit:cover">
     </div>
     <div>
       <div class="font-display" style="font-size:17px;font-weight:700;color:var(--text);line-height:1.1">

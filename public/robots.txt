@@ -1,2 +1,17 @@
 User-agent: *
-Disallow:
+Disallow: /dashboard
+Disallow: /transaksi
+Disallow: /produk
+Disallow: /laporan
+Disallow: /outlet
+Disallow: /users
+Disallow: /settings
+Disallow: /pos
+Disallow: /stock
+Disallow: /closing
+Disallow: /api/
+
+Allow: /login
+Allow: /img/
+
+Sitemap: https://pabalu.id/sitemap.xml
