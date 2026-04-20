@@ -3,22 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Login — Pabalu | Sistem Manajemen UMKM</title>
-<meta name="description" content="Login ke Pabalu — platform manajemen UMKM untuk mengelola produk, transaksi, dan laporan bisnis Anda dengan mudah.">
-<meta name="robots" content="noindex, nofollow">
-<link rel="canonical" href="{{ url('/login') }}">
-
-<!-- Open Graph -->
-<meta property="og:type" content="website">
-<meta property="og:url" content="{{ url('/login') }}">
-<meta property="og:title" content="Pabalu — Sistem Manajemen UMKM">
-<meta property="og:description" content="Platform manajemen UMKM untuk mengelola produk, transaksi, dan laporan bisnis Anda dengan mudah.">
-<meta property="og:image" content="{{ asset('img/Logo Pabalu.png') }}">
-<meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="Pabalu — Sistem Manajemen UMKM">
-<meta name="twitter:image" content="{{ asset('img/Logo Pabalu.png') }}">
-
-<link rel="icon" type="image/x-icon" href="{{ asset('img/Logo.ico') }}">
+<title>Login — Pabalu</title>
+<x-seo
+    title="Login — Pabalu | Sistem Manajemen UMKM"
+    description="Masuk ke akun Pabalu dan kelola bisnis UMKM Anda."
+    url="{{ url('/login') }}"
+    :noindex="true"
+/>
 
 <!-- Fonts -->
 <link href="https://fonts.googleapis.com/css2?family=Clash+Display:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">

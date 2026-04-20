@@ -3,7 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pabalu — Sistem Manajemen UMKM</title>
+<title>Pabalu — Sistem Manajemen UMKM untuk Bisnis Indonesia</title>
+<x-seo
+    title="Pabalu — Sistem Manajemen UMKM untuk Bisnis Indonesia"
+    description="Kelola produk, transaksi, stok, laporan, dan outlet bisnis Anda dalam satu platform. Gratis 30 hari trial, tanpa kartu kredit."
+    url="{{ url('/') }}"
+/>
 <link href="https://fonts.googleapis.com/css2?family=Clash+Display:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <style>

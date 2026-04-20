@@ -3,7 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Daftar Sebagai Owner — Pabalu</title>
+  <title>Daftar Gratis — Pabalu | Sistem Manajemen UMKM</title>
+<x-seo
+    title="Daftar Gratis — Pabalu | Sistem Manajemen UMKM"
+    description="Buat akun Pabalu gratis dan mulai kelola bisnis UMKM Anda hari ini. Trial 30 hari tanpa biaya."
+    url="{{ url('/register') }}"
+/>
   <link href="https://fonts.googleapis.com/css2?family=Clash+Display:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <style>
