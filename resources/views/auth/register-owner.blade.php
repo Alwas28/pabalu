@@ -19,12 +19,11 @@
     /* Logo */
     .logo{display:flex;align-items:center;gap:12px;justify-content:center;margin-bottom:32px}
     .logo-icon{
-      width:44px;height:44px;border-radius:12px;
-      background:linear-gradient(135deg,#f59e0b,#ef4444);
-      display:grid;place-items:center;font-size:18px;color:#fff;
+      width:44px;height:44px;border-radius:12px;overflow:hidden;flex-shrink:0;
     }
+    .logo-icon img{width:100%;height:100%;object-fit:cover}
     .logo-text{font-family:'Clash Display',sans-serif;font-size:22px;font-weight:700;color:#e2e8f0}
-    .logo-text span{color:#f59e0b}
+    .logo-text span{color:#E8000D}
 
     /* Card */
     .card{
@@ -88,7 +87,7 @@
 <div class="wrap">
 
   <div class="logo">
-    <div class="logo-icon"><i class="fa-solid fa-store"></i></div>
+    <div class="logo-icon"><img src="{{ asset('img/Logo Pabalu.png') }}" alt="Pabalu"></div>
     <div class="logo-text">Pa<span>balu</span></div>
   </div>
 

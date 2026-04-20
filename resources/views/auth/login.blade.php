@@ -3,7 +3,22 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Login — Pabalu</title>
+<title>Login — Pabalu | Sistem Manajemen UMKM</title>
+<meta name="description" content="Login ke Pabalu — platform manajemen UMKM untuk mengelola produk, transaksi, dan laporan bisnis Anda dengan mudah.">
+<meta name="robots" content="noindex, nofollow">
+<link rel="canonical" href="{{ url('/login') }}">
+
+<!-- Open Graph -->
+<meta property="og:type" content="website">
+<meta property="og:url" content="{{ url('/login') }}">
+<meta property="og:title" content="Pabalu — Sistem Manajemen UMKM">
+<meta property="og:description" content="Platform manajemen UMKM untuk mengelola produk, transaksi, dan laporan bisnis Anda dengan mudah.">
+<meta property="og:image" content="{{ asset('img/Logo Pabalu.png') }}">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Pabalu — Sistem Manajemen UMKM">
+<meta name="twitter:image" content="{{ asset('img/Logo Pabalu.png') }}">
+
+<link rel="icon" type="image/x-icon" href="{{ asset('img/Logo.ico') }}">
 
 <!-- Fonts -->
 <link href="https://fonts.googleapis.com/css2?family=Clash+Display:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -24,8 +39,8 @@ body{
 .font-display,h1,h2,h3{font-family:'Clash Display',sans-serif}
 
 :root{
-  --ac:#f59e0b;--ac2:#ef4444;
-  --ac-lt:rgba(245,158,11,.14);
+  --ac:#E8000D;--ac2:#C0000A;
+  --ac-lt:rgba(232,0,13,.14);
   --bg:#0f1117;
   --surface:#161b27;
   --surface2:#1c2336;
@@ -154,7 +169,7 @@ body::before{
 
   <!-- Logo -->
   <div class="logo-wrap">
-    <div class="logo-icon"><i class="fa-solid fa-store"></i></div>
+    <div class="logo-icon" style="background:none;padding:0;overflow:hidden"><img src="{{ asset('img/Logo Pabalu.png') }}" alt="Pabalu" style="width:100%;height:100%;object-fit:cover;border-radius:13px"></div>
     <div>
       <div class="font-display logo-name">Pa<span>balu</span></div>
       <div class="logo-sub">Sistem Manajemen UMKM</div>
