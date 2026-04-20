@@ -608,7 +608,7 @@ textarea.f-input{resize:vertical;min-height:80px}
           <i class="fa-solid fa-hourglass-half"></i>
           <span>
             Masa trial Anda berakhir dalam <strong>{{ $dLeft }} hari</strong>
-            ({{ $ownerAcc->trial_ends_at->translatedFormat('d F Y') }}).
+            ({{ $ownerAcc->trial_ends_at?->translatedFormat('d F Y') ?? '-' }}).
             Hubungi admin untuk upgrade ke <strong>Premium</strong>.
           </span>
         </div>
