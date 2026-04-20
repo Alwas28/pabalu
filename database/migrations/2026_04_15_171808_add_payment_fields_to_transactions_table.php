@@ -9,8 +9,12 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('transactions', function (Blueprint $table) {
-            $table->enum('metode_bayar', ['tunai', 'qris', 'transfer'])->default('tunai')->after('status');
-            $table->string('bukti_bayar')->nullable()->after('metode_bayar');
+            if (!Schema::hasColumn('transactions', 'metode_bayar')) {
+                $table->enum('metode_bayar', ['tunai', 'qris', 'transfer'])->default('tunai')->after('status');
+            }
+            if (!Schema::hasColumn('transactions', 'bukti_bayar')) {
+                $table->string('bukti_bayar')->nullable()->after('metode_bayar');
+            }
         });
     }
 

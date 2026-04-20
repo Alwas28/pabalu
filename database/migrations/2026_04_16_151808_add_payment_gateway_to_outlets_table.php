@@ -12,7 +12,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('outlets', function (Blueprint $table) {
-            $table->boolean('payment_gateway_enabled')->default(false)->after('slug');
+            if (!Schema::hasColumn('outlets', 'payment_gateway_enabled')) {
+                $table->boolean('payment_gateway_enabled')->default(false)->after('slug');
+            }
         });
     }
 

@@ -12,7 +12,9 @@ return new class extends Migration
         DB::statement("ALTER TABLE transactions MODIFY COLUMN metode_bayar ENUM('tunai','qris','transfer','gateway') NOT NULL DEFAULT 'tunai'");
 
         Schema::table('transactions', function (Blueprint $table) {
-            $table->string('payment_ref', 100)->nullable()->after('bukti_bayar');
+            if (!Schema::hasColumn('transactions', 'payment_ref')) {
+                $table->string('payment_ref', 100)->nullable()->after('bukti_bayar');
+            }
         });
     }
 

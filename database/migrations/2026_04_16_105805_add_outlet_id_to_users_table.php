@@ -12,11 +12,13 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->foreignId('outlet_id')
-                  ->nullable()
-                  ->after('remember_token')
-                  ->constrained('outlets')
-                  ->nullOnDelete();
+            if (!Schema::hasColumn('users', 'outlet_id')) {
+                $table->foreignId('outlet_id')
+                      ->nullable()
+                      ->after('remember_token')
+                      ->constrained('outlets')
+                      ->nullOnDelete();
+            }
         });
     }
 

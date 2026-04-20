@@ -12,17 +12,23 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->enum('account_type', ['trial', 'premium', 'inactive'])->default('trial')->after('outlet_id');
-            $table->timestamp('trial_ends_at')->nullable()->after('account_type');
+            if (!Schema::hasColumn('users', 'account_type')) {
+                $table->enum('account_type', ['trial', 'premium', 'inactive'])->default('trial')->after('outlet_id');
+            }
+            if (!Schema::hasColumn('users', 'trial_ends_at')) {
+                $table->timestamp('trial_ends_at')->nullable()->after('account_type');
+            }
         });
 
-        // Set existing admin/kasir as premium (no expiry), existing owners as trial with 30 days from now
-        \App\Models\User::role('admin')->update(['account_type' => 'premium']);
-        \App\Models\User::role('kasir')->update(['account_type' => 'premium']);
-        \App\Models\User::role('owner')->update([
-            'account_type'   => 'trial',
-            'trial_ends_at'  => now()->addDays(30),
-        ]);
+        // Update existing users jika roles sudah ada (skip di fresh install)
+        if (\Spatie\Permission\Models\Role::where('name', 'admin')->exists()) {
+            \App\Models\User::role('admin')->update(['account_type' => 'premium']);
+            \App\Models\User::role('kasir')->update(['account_type' => 'premium']);
+            \App\Models\User::role('owner')->update([
+                'account_type'  => 'trial',
+                'trial_ends_at' => now()->addDays(30),
+            ]);
+        }
     }
 
     public function down(): void

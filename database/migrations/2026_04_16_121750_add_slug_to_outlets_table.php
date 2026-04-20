@@ -12,7 +12,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('outlets', function (Blueprint $table) {
-            $table->string('slug')->nullable()->unique()->after('nama');
+            if (!Schema::hasColumn('outlets', 'slug')) {
+                $table->string('slug')->nullable()->unique()->after('nama');
+            }
         });
 
         // Auto-fill slug for existing outlets

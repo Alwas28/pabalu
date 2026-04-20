@@ -12,8 +12,12 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('orders', function (Blueprint $table) {
-            $table->string('payment_token')->nullable()->after('order_status');
-            $table->timestamp('paid_at')->nullable()->after('completed_at');
+            if (!Schema::hasColumn('orders', 'payment_token')) {
+                $table->string('payment_token')->nullable()->after('order_status');
+            }
+            if (!Schema::hasColumn('orders', 'paid_at')) {
+                $table->timestamp('paid_at')->nullable()->after('completed_at');
+            }
         });
 
         // Tambah pending_payment ke enum
