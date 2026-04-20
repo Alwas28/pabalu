@@ -143,7 +143,7 @@
                 </span>
               @endif
             </td>
-            <td style="font-size:12px;color:var(--muted)">{{ $user->created_at->format('d M Y') }}</td>
+            <td style="font-size:12px;color:var(--muted)">{{ $user->created_at?->format('d M Y') ?? '-' }}</td>
             <td>
               <div style="display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap">
                 @if(auth()->user()->isAdmin() && $user->hasRole('owner'))
