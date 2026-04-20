@@ -157,7 +157,7 @@
                   <i class="fa-solid fa-clock"></i> {{ $daysLeft }} hari lagi
                 </div>
                 <div style="font-size:11px;color:var(--muted);margin-top:1px">
-                  s/d {{ $owner->trial_ends_at->translatedFormat('d M Y') }}
+                  s/d {{ $owner->trial_ends_at?->translatedFormat('d M Y') ?? '-' }}
                 </div>
               @endif
             </td>
