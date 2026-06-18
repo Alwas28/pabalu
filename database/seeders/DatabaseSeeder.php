@@ -19,11 +19,11 @@ class DatabaseSeeder extends Seeder
         $this->call(OutletTypesSeeder::class);
         $this->call(ProvinceSeeder::class);
 
-        // User::factory(10)->create();
-
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
+        User::create([
+            'name'              => 'Test User',
+            'email'             => 'test@example.com',
+            'password'          => 'password',
+            'email_verified_at' => now(),
         ]);
     }
 }
