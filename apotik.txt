@@ -1,0 +1,167 @@
+Jika Anda membuat Sistem Informasi Apotek, fiturnya dapat dibagi menjadi beberapa modul utama berikut:
+
+1. Master Data
+Data Obat
+Kode obat
+Nama obat
+Kategori obat
+Golongan obat
+Satuan (tablet, botol, strip, dll)
+Merek
+Kandungan
+Harga beli
+Harga jual
+Minimum stok
+Barcode
+Supplier
+Data supplier
+Kontak supplier
+Alamat supplier
+Dokter
+Data dokter
+SIP dokter
+Spesialisasi
+Pelanggan
+Member pelanggan
+Riwayat pembelian
+Poin/member card
+2. Manajemen Persediaan (Inventory)
+Opening Stock
+Input stok awal
+Pembelian Obat
+Purchase Order (PO)
+Penerimaan barang
+Retur pembelian
+Faktur pembelian
+Manajemen Stok
+Mutasi stok
+Penyesuaian stok (stock adjustment)
+Transfer stok antar cabang
+Stok opname
+Batch dan Expired Date
+Nomor batch
+Tanggal kadaluarsa
+FIFO/FEFO
+Monitoring Stok
+Stok minimum
+Notifikasi stok menipis
+Notifikasi obat kadaluarsa
+3. Penjualan
+Penjualan Umum
+Scan barcode
+Multi pembayaran
+Cetak struk
+Diskon
+Pajak
+Penjualan Resep
+Input resep dokter
+Upload foto resep
+Verifikasi resep
+Riwayat resep
+Retur Penjualan
+Retur obat
+Pengembalian dana
+4. Kasir (POS)
+Opening Shift
+Kas awal
+Transaksi Kasir
+Penjualan
+Pengeluaran kas
+Penerimaan kas
+Closing Shift
+Tutup kas
+Selisih kas
+Rekap transaksi
+5. Keuangan
+Hutang Supplier
+Daftar hutang
+Jatuh tempo
+Pembayaran hutang
+Piutang Pelanggan
+Piutang pelanggan
+Pembayaran piutang
+Cash Flow
+Kas masuk
+Kas keluar
+Laporan Keuangan
+Laba rugi
+Neraca sederhana
+Arus kas
+6. CRM (Customer Relationship Management)
+Member Pelanggan
+Registrasi member
+Poin reward
+Voucher
+Riwayat Pembelian
+Histori transaksi
+Obat yang sering dibeli
+Pengingat
+Pengingat obat rutin
+Pengingat kontrol dokter
+7. Pelaporan
+Laporan Penjualan
+Harian
+Mingguan
+Bulanan
+Tahunan
+Laporan Obat
+Stok saat ini
+Obat terlaris
+Obat tidak laku
+Obat kadaluarsa
+Laporan Pembelian
+Per supplier
+Per periode
+Laporan Keuangan
+Pendapatan
+Pengeluaran
+Profit
+8. Fitur Khusus Apotek
+FEFO (First Expired First Out)
+
+Obat dengan masa kadaluarsa terdekat dijual terlebih dahulu.
+
+Obat Keras
+Wajib resep
+Validasi penjualan
+Psikotropika & Narkotika
+Pencatatan khusus
+Laporan regulasi
+Monitoring Expired
+Notifikasi H-90
+H-60
+H-30
+E-Resep
+Integrasi resep digital
+Upload resep online
+Jika dibuat seperti SaaS (multi tenant)
+
+Saat owner mendaftar:
+
+Buat profil apotek.
+Input data outlet.
+Input kas awal.
+Input supplier.
+Input daftar obat.
+Input stok awal (Opening Stock).
+Input pengguna (apoteker dan kasir).
+Atur pajak dan margin keuntungan.
+Mulai transaksi.
+Flag yang cocok untuk Apotek
+Fitur	Wajib
+Opening Shift	✅
+Track Stock	✅
+Track COGS (HPP)	✅
+Batch Number	✅
+Expired Date	✅
+Multi Outlet	Opsional
+Membership	Opsional
+Hutang Supplier	✅
+Barcode	✅
+Resep Dokter	✅
+
+Untuk sistem apotek, kombinasi yang paling umum adalah:
+
+Opening Shift + Track Stock + Track COGS + Batch + Expired Date
+
+karena apotek harus mengontrol stok, harga pokok, nomor batch, dan tanggal kedaluwarsa secara ketat.

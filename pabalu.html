@@ -1,0 +1,970 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard — Pabalu</title>
+
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Clash+Display:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<!-- Tailwind CDN (for utility classes) -->
+<script src="https://cdn.tailwindcss.com"></script>
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Plus Jakarta Sans',sans-serif;transition:background .25s,color .25s}
+.font-display,h1,h2,h3,h4{font-family:'Clash Display',sans-serif}
+
+/* ════ ACCENT VARS ════ */
+:root{--ac:#f59e0b;--ac2:#ef4444;--ac-rgb:245,158,11;--ac-lt:rgba(245,158,11,.14);--ac-lt2:rgba(245,158,11,.08)}
+
+/* ════ DARK THEME (default) ════ */
+body{
+  --bg:      #0f1117;
+  --surface: #161b27;
+  --surface2:#1c2336;
+  --border:  #252d42;
+  --text:    #e2e8f0;
+  --muted:   #64748b;
+  --sub:     #94a3b8;
+  --card-hover:rgba(255,255,255,.025);
+  --scrollbar:#252d42;
+  background:var(--bg);
+  color:var(--text);
+}
+body.light{
+  --bg:      #f1f5f9;
+  --surface: #ffffff;
+  --surface2:#f8fafc;
+  --border:  #e2e8f0;
+  --text:    #1e293b;
+  --muted:   #94a3b8;
+  --sub:     #64748b;
+  --card-hover:rgba(0,0,0,.025);
+  --scrollbar:#cbd5e1;
+}
+
+/* ════ SEMANTIC HELPERS ════ */
+.a-text  {color:var(--ac)!important}
+.a-bg    {background:var(--ac)!important}
+.a-bg-lt {background:var(--ac-lt)!important}
+.a-border{border-color:var(--ac)!important}
+.a-grad  {background:linear-gradient(135deg,var(--ac),var(--ac2))!important}
+
+/* ════ SIDEBAR ════ */
+#sb{
+  position:fixed;top:0;left:0;height:100%;width:258px;
+  display:flex;flex-direction:column;z-index:50;
+  background:var(--surface);border-right:1px solid var(--border);
+  transition:transform .3s,background .25s,border-color .25s;
+}
+@media(max-width:1023px){
+  #sb{transform:translateX(-100%)}
+  #sb.open{transform:translateX(0)}
+}
+
+/* Sidebar scroll */
+#sb-nav{overflow-y:auto;flex:1;scrollbar-width:thin;scrollbar-color:var(--scrollbar) transparent}
+#sb-nav::-webkit-scrollbar{width:4px}
+#sb-nav::-webkit-scrollbar-thumb{background:var(--scrollbar);border-radius:99px}
+
+/* Nav items */
+.nav-item{
+  display:flex;align-items:center;gap:10px;
+  padding:9px 12px;border-radius:10px;font-size:13.5px;font-weight:500;
+  text-decoration:none;margin-bottom:2px;transition:background .15s,color .15s;
+}
+.nav-active{
+  background:var(--ac-lt)!important;color:var(--ac)!important;
+  border-left:2.5px solid var(--ac)!important;
+  padding-left:calc(12px - 2.5px)!important;
+}
+.nav-inactive{color:var(--sub)}
+.nav-inactive:hover{background:var(--surface2);color:var(--text)}
+
+/* ════ MAIN LAYOUT ════ */
+#main{margin-left:258px;transition:margin .3s}
+@media(max-width:1023px){#main{margin-left:0}}
+
+/* ════ HEADER ════ */
+#header{
+  position:sticky;top:0;z-index:40;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 24px;
+  background:var(--surface);border-bottom:1px solid var(--border);
+  transition:background .25s,border-color .25s;
+}
+
+/* ════ CONTENT ════ */
+#content{padding:24px;max-width:1400px;display:flex;flex-direction:column;gap:20px}
+
+/* ════ STAT CARDS ════ */
+.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+@media(max-width:1200px){.stat-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:600px){.stat-grid{grid-template-columns:1fr}}
+
+.stat-card{
+  background:var(--surface);border:1px solid var(--border);border-radius:16px;
+  padding:20px;display:flex;align-items:center;gap:16px;
+  transition:border-color .2s,box-shadow .2s;
+}
+.stat-card:hover{border-color:var(--ac);box-shadow:0 0 0 1px var(--ac-lt),0 8px 24px rgba(0,0,0,.15)}
+
+.stat-icon{
+  width:44px;height:44px;border-radius:12px;
+  display:grid;place-items:center;font-size:17px;flex-shrink:0;
+}
+.stat-num{font-family:'Clash Display',sans-serif;font-size:26px;font-weight:700;color:var(--text);line-height:1}
+.stat-label{font-size:11.5px;color:var(--muted);margin-top:3px}
+.stat-trend{font-size:11px;font-weight:600;margin-top:4px;display:flex;align-items:center;gap:3px}
+.trend-up{color:#34d399}.trend-down{color:#f87171}
+
+/* ════ CARD BASE ════ */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:16px}
+.card-header{
+  padding:16px 20px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.card-title{font-family:'Clash Display',sans-serif;font-size:15px;font-weight:600;color:var(--text)}
+.card-body{padding:20px}
+
+/* ════ TABLE ════ */
+.tbl{width:100%;border-collapse:collapse;font-size:13px}
+.tbl thead th{
+  padding:10px 14px;text-align:left;font-size:11px;font-weight:600;
+  letter-spacing:.8px;text-transform:uppercase;color:var(--muted);
+  background:var(--surface2);border-bottom:1px solid var(--border)
+}
+.tbl thead th:first-child{border-radius:10px 0 0 10px}
+.tbl thead th:last-child{border-radius:0 10px 10px 0}
+.tbl tbody tr{border-bottom:1px solid var(--border);transition:background .12s}
+.tbl tbody tr:last-child{border-bottom:none}
+.tbl tbody tr:hover{background:var(--surface2)}
+.tbl tbody td{padding:12px 14px;color:var(--sub)}
+.tbl tbody td.td-main{color:var(--text);font-weight:500}
+
+/* ════ BADGE ════ */
+.badge{
+  display:inline-flex;align-items:center;gap:4px;
+  padding:3px 10px;border-radius:99px;font-size:11px;font-weight:600;
+}
+.badge-green {background:rgba(16,185,129,.15);color:#34d399}
+.badge-amber {background:rgba(245,158,11,.15);color:#fbbf24}
+.badge-red   {background:rgba(239,68,68,.15); color:#f87171}
+.badge-blue  {background:rgba(99,102,241,.15); color:#818cf8}
+.badge-gray  {background:rgba(148,163,184,.12);color:#94a3b8}
+
+/* ════ QUICK NAV ════ */
+.qnav-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+@media(max-width:768px){.qnav-grid{grid-template-columns:repeat(2,1fr)}}
+
+.qnav-item{
+  background:var(--surface);border:1px solid var(--border);border-radius:14px;
+  padding:14px 16px;display:flex;align-items:center;gap:12px;
+  text-decoration:none;transition:border-color .2s,background .2s;cursor:pointer;
+}
+.qnav-item:hover{background:var(--surface2)}
+
+/* ════ PROGRESS BAR ════ */
+.prog-bar{height:6px;border-radius:99px;background:var(--surface2);overflow:hidden;margin-top:6px}
+.prog-fill{height:100%;border-radius:99px;background:linear-gradient(135deg,var(--ac),var(--ac2))}
+
+/* ════ TWO-COL GRID ════ */
+.two-col{display:grid;grid-template-columns:1fr 380px;gap:20px;align-items:start}
+@media(max-width:1100px){.two-col{grid-template-columns:1fr}}
+
+/* ════ THEME TOGGLE ════ */
+#tp{
+  position:absolute;right:0;top:calc(100% + 8px);
+  background:var(--surface);border:1px solid var(--border);border-radius:16px;
+  padding:10px;display:flex;flex-direction:column;gap:2px;min-width:210px;
+  box-shadow:0 8px 32px rgba(0,0,0,.35);
+  transition:opacity .2s,transform .2s;
+}
+#tp.hidden{opacity:0;pointer-events:none;transform:translateY(6px)}
+.tp-btn{
+  display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:10px;
+  font-size:13px;font-weight:500;cursor:pointer;transition:background .12s;
+  background:none;border:none;color:var(--text);text-align:left;width:100%;
+}
+.tp-btn:hover{background:var(--surface2)}
+.tp-btn.active{background:var(--ac-lt);color:var(--ac)}
+/* color swatches */
+.tp-divider{height:1px;background:var(--border);margin:6px 4px}
+.tp-section-label{font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--muted);padding:4px 12px 6px}
+.color-swatches{display:flex;flex-wrap:wrap;gap:7px;padding:4px 12px 8px}
+.swatch{
+  width:26px;height:26px;border-radius:8px;cursor:pointer;border:2px solid transparent;
+  transition:transform .15s,border-color .15s;position:relative;
+}
+.swatch:hover{transform:scale(1.15)}
+.swatch.active{border-color:#fff;box-shadow:0 0 0 1px rgba(255,255,255,.25)}
+body.light .swatch.active{border-color:#0f1117;box-shadow:0 0 0 1px rgba(0,0,0,.2)}
+.swatch .check{
+  position:absolute;inset:0;display:grid;place-items:center;
+  font-size:11px;color:#fff;opacity:0;transition:opacity .15s;
+}
+body.light .swatch .check{color:#000}
+.swatch.active .check{opacity:1}
+
+/* ════ OVERLAY ════ */
+#ov{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:45;display:none;backdrop-filter:blur(3px)}
+
+/* ════ MODAL ════ */
+.modal-backdrop{
+  position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);
+  z-index:60;display:flex;align-items:center;justify-content:center;padding:16px;
+  opacity:0;pointer-events:none;transition:opacity .2s;
+}
+.modal-backdrop.open{opacity:1;pointer-events:all}
+.modal-box{
+  background:var(--surface);border:1px solid var(--border);border-radius:20px;
+  width:100%;max-width:440px;box-shadow:0 24px 64px rgba(0,0,0,.5);
+  transform:translateY(16px);transition:transform .25s;
+}
+.modal-backdrop.open .modal-box{transform:translateY(0)}
+
+/* ════ FORM ════ */
+.f-label{display:block;font-size:12px;font-weight:600;color:var(--sub);margin-bottom:5px;letter-spacing:.3px}
+.f-input{
+  width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);
+  border-radius:12px;padding:9px 13px;font-size:13.5px;font-family:inherit;
+  outline:none;transition:border-color .15s,box-shadow .15s;
+}
+.f-input:focus{border-color:var(--ac);box-shadow:0 0 0 3px var(--ac-lt)}
+select.f-input option{background:var(--surface2);color:var(--text)}
+
+/* ════ ANIMATIONS ════ */
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+.animate-fadeUp{animation:fadeUp .35s ease both}
+.d1{animation-delay:.05s}.d2{animation-delay:.10s}.d3{animation-delay:.15s}
+.d4{animation-delay:.20s}.d5{animation-delay:.25s}
+
+/* ════ TOAST ════ */
+#toast-container{position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:10px;pointer-events:none}
+.toast{
+  display:flex;align-items:center;gap:10px;padding:12px 16px;border-radius:14px;
+  font-size:13px;font-weight:500;pointer-events:auto;
+  box-shadow:0 4px 24px rgba(0,0,0,.35);animation:fadeUp .25s ease both;
+  border:1px solid var(--border);background:var(--surface);color:var(--text);
+  min-width:240px;max-width:340px;
+}
+.toast.success .ti{color:#10b981}.toast.error .ti{color:#f87171}.toast.info .ti{color:#60a5fa}
+
+/* ════ SCROLLBAR ════ */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--scrollbar);border-radius:99px}
+</style>
+</head>
+<body>
+
+<div id="toast-container"></div>
+
+<!-- Mobile overlay -->
+<div id="ov" onclick="closeSB()"></div>
+
+<!-- ══════════════════ SIDEBAR ══════════════════ -->
+<aside id="sb">
+
+  <!-- Logo -->
+  <div style="display:flex;align-items:center;gap:12px;padding:18px 20px 18px;border-bottom:1px solid var(--border);flex-shrink:0">
+    <div class="a-grad" style="width:38px;height:38px;border-radius:11px;display:grid;place-items:center;flex-shrink:0">
+      <i class="fa-solid fa-store" style="color:#fff;font-size:16px"></i>
+    </div>
+    <div>
+      <div class="font-display" style="font-size:17px;font-weight:700;color:var(--text);line-height:1.1">
+        Pa<span class="a-text">balu</span>
+      </div>
+      <div style="font-size:9px;color:var(--muted);letter-spacing:.3px;margin-top:1px">Sistem Manajemen UMKM</div>
+    </div>
+  </div>
+
+  <!-- Nav -->
+  <div id="sb-nav" style="padding:10px 10px">
+
+    <!-- Utama -->
+    <p style="font-size:10px;font-weight:600;letter-spacing:1.3px;text-transform:uppercase;color:var(--muted);padding:4px 8px;margin-top:4px;margin-bottom:4px">Utama</p>
+    <a href="#" class="nav-item nav-active" onclick="setPage('dashboard',this);return false">
+      <i class="fa-solid fa-chart-pie" style="width:15px;text-align:center;font-size:13px"></i>Dashboard
+    </a>
+
+    <!-- Penjualan -->
+    <p style="font-size:10px;font-weight:600;letter-spacing:1.3px;text-transform:uppercase;color:var(--muted);padding:4px 8px;margin-top:14px;margin-bottom:4px">Penjualan</p>
+    <a href="#" class="nav-item nav-inactive" onclick="setPage('transaksi',this);return false">
+      <i class="fa-solid fa-receipt" style="width:15px;text-align:center;font-size:13px"></i>Transaksi
+    </a>
+    <a href="#" class="nav-item nav-inactive" onclick="setPage('pesanan',this);return false">
+      <i class="fa-solid fa-box" style="width:15px;text-align:center;font-size:13px"></i>Pesanan
+    </a>
+    <a href="#" class="nav-item nav-inactive" onclick="setPage('piutang',this);return false">
+      <i class="fa-solid fa-file-invoice-dollar" style="width:15px;text-align:center;font-size:13px"></i>Piutang
+    </a>
+
+    <!-- Inventori -->
+    <p style="font-size:10px;font-weight:600;letter-spacing:1.3px;text-transform:uppercase;color:var(--muted);padding:4px 8px;margin-top:14px;margin-bottom:4px">Inventori</p>
+    <a href="#" class="nav-item nav-inactive" onclick="setPage('produk',this);return false">
+      <i class="fa-solid fa-cubes" style="width:15px;text-align:center;font-size:13px"></i>Produk
+    </a>
+    <a href="#" class="nav-item nav-inactive" onclick="setPage('kategori',this);return false">
+      <i class="fa-solid fa-tags" style="width:15px;text-align:center;font-size:13px"></i>Kategori
+    </a>
+    <a href="#" class="nav-item nav-inactive" onclick="setPage('stok',this);return false">
+      <i class="fa-solid fa-warehouse" style="width:15px;text-align:center;font-size:13px"></i>Stok & Gudang
+    </a>
+
+    <!-- Pelanggan -->
+    <p style="font-size:10px;font-weight:600;letter-spacing:1.3px;text-transform:uppercase;color:var(--muted);padding:4px 8px;margin-top:14px;margin-bottom:4px">Pelanggan</p>
+    <a href="#" class="nav-item nav-inactive" onclick="setPage('pelanggan',this);return false">
+      <i class="fa-solid fa-users" style="width:15px;text-align:center;font-size:13px"></i>Daftar Pelanggan
+    </a>
+    <a href="#" class="nav-item nav-inactive" onclick="setPage('loyalty',this);return false">
+      <i class="fa-solid fa-star" style="width:15px;text-align:center;font-size:13px"></i>Program Loyalti
+    </a>
+
+    <!-- Laporan -->
+    <p style="font-size:10px;font-weight:600;letter-spacing:1.3px;text-transform:uppercase;color:var(--muted);padding:4px 8px;margin-top:14px;margin-bottom:4px">Laporan</p>
+    <a href="#" class="nav-item nav-inactive" onclick="setPage('lap-penjualan',this);return false">
+      <i class="fa-solid fa-chart-line" style="width:15px;text-align:center;font-size:13px"></i>Laporan Penjualan
+    </a>
+    <a href="#" class="nav-item nav-inactive" onclick="setPage('lap-stok',this);return false">
+      <i class="fa-solid fa-clipboard-list" style="width:15px;text-align:center;font-size:13px"></i>Laporan Stok
+    </a>
+    <a href="#" class="nav-item nav-inactive" onclick="setPage('lap-laba',this);return false">
+      <i class="fa-solid fa-scale-balanced" style="width:15px;text-align:center;font-size:13px"></i>Laba & Rugi
+    </a>
+
+    <!-- Pengaturan -->
+    <p style="font-size:10px;font-weight:600;letter-spacing:1.3px;text-transform:uppercase;color:var(--muted);padding:4px 8px;margin-top:14px;margin-bottom:4px">Pengaturan</p>
+    <a href="#" class="nav-item nav-inactive">
+      <i class="fa-solid fa-shop" style="width:15px;text-align:center;font-size:13px"></i>Toko Saya
+    </a>
+    <a href="#" class="nav-item nav-inactive">
+      <i class="fa-solid fa-user-gear" style="width:15px;text-align:center;font-size:13px"></i>Akun
+    </a>
+  </div>
+
+  <!-- User card -->
+  <div style="padding:12px 14px;border-top:1px solid var(--border);flex-shrink:0">
+    <div style="display:flex;align-items:center;gap:10px;padding:10px;border-radius:12px;background:var(--surface2);cursor:pointer"
+      onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background='var(--surface2)'">
+      <div class="a-grad" style="width:34px;height:34px;border-radius:9px;display:grid;place-items:center;flex-shrink:0;font-weight:700;color:#fff;font-size:13px">A</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Ahmad Fulan</div>
+        <div style="font-size:11px;color:var(--muted)">Pemilik Toko</div>
+      </div>
+      <i class="fa-solid fa-ellipsis-vertical" style="color:var(--muted);font-size:12px"></i>
+    </div>
+  </div>
+</aside>
+
+<!-- ══════════════════ MAIN ══════════════════ -->
+<div id="main">
+
+  <!-- Header -->
+  <header id="header">
+    <div style="display:flex;align-items:center;gap:14px">
+      <!-- Mobile hamburger -->
+      <button onclick="toggleSB()" style="display:none;background:none;border:none;cursor:pointer;color:var(--sub);font-size:18px" id="hamburger">
+        <i class="fa-solid fa-bars"></i>
+      </button>
+      <div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:1px">Selamat datang kembali 👋</div>
+        <h1 id="page-title" class="font-display" style="font-size:18px;font-weight:700;color:var(--text)">Dashboard</h1>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <!-- Period selector -->
+      <select class="f-input" style="width:auto;padding:7px 12px;font-size:12.5px" onchange="showToast('info','Periode diperbarui')">
+        <option>April 2026</option>
+        <option>Maret 2026</option>
+        <option>Februari 2026</option>
+        <option>Januari 2026</option>
+      </select>
+      <!-- Notif -->
+      <button onclick="showToast('info','3 notifikasi baru')"
+        style="position:relative;width:38px;height:38px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);cursor:pointer;color:var(--sub);font-size:14px;transition:color .15s"
+        onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--sub)'">
+        <i class="fa-solid fa-bell"></i>
+        <span style="position:absolute;top:6px;right:7px;width:7px;height:7px;border-radius:50%;background:var(--ac);border:2px solid var(--surface2)"></span>
+      </button>
+      <!-- Theme toggle -->
+      <div style="position:relative">
+        <button id="theme-btn" onclick="toggleTP()"
+          style="width:38px;height:38px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);cursor:pointer;color:var(--sub);font-size:14px;transition:color .15s"
+          onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--sub)'">
+          <i class="fa-solid fa-circle-half-stroke"></i>
+        </button>
+        <div id="tp" class="hidden">
+          <!-- Mode -->
+          <button class="tp-btn active" id="tp-dark" onclick="setTheme('dark')">
+            <i class="fa-solid fa-moon" style="width:14px;text-align:center"></i>Mode Gelap
+          </button>
+          <button class="tp-btn" id="tp-light" onclick="setTheme('light')">
+            <i class="fa-solid fa-sun" style="width:14px;text-align:center"></i>Mode Terang
+          </button>
+          <!-- Divider -->
+          <div class="tp-divider"></div>
+          <!-- Color -->
+          <div class="tp-section-label">Warna Aksen</div>
+          <div class="color-swatches" id="color-swatches">
+            <!-- rendered by JS -->
+          </div>
+        </div>
+      </div>
+      <!-- New transaction -->
+      <button onclick="openModal('modal-transaksi')"
+        class="a-grad" style="display:flex;align-items:center;gap:7px;padding:8px 16px;border-radius:11px;border:none;cursor:pointer;color:#fff;font-size:13px;font-weight:600;font-family:inherit">
+        <i class="fa-solid fa-plus"></i><span>Transaksi Baru</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Content -->
+  <div id="content">
+
+    <!-- ── Stat Cards ── -->
+    <div class="stat-grid animate-fadeUp">
+      <div class="stat-card">
+        <div class="stat-icon" style="background:var(--ac-lt);color:var(--ac)">
+          <i class="fa-solid fa-money-bill-trend-up"></i>
+        </div>
+        <div>
+          <div class="stat-num">Rp 48,7 Jt</div>
+          <div class="stat-label">Total Penjualan Bulan Ini</div>
+          <div class="stat-trend trend-up"><i class="fa-solid fa-arrow-trend-up"></i>+12,4% vs bulan lalu</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background:rgba(99,102,241,.14);color:#818cf8">
+          <i class="fa-solid fa-receipt"></i>
+        </div>
+        <div>
+          <div class="stat-num">1.284</div>
+          <div class="stat-label">Total Transaksi</div>
+          <div class="stat-trend trend-up"><i class="fa-solid fa-arrow-trend-up"></i>+8,1% vs bulan lalu</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background:rgba(16,185,129,.14);color:#34d399">
+          <i class="fa-solid fa-cubes"></i>
+        </div>
+        <div>
+          <div class="stat-num">3.891</div>
+          <div class="stat-label">Produk Terjual</div>
+          <div class="stat-trend trend-up"><i class="fa-solid fa-arrow-trend-up"></i>+5,3% vs bulan lalu</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background:rgba(239,68,68,.14);color:#f87171">
+          <i class="fa-solid fa-users"></i>
+        </div>
+        <div>
+          <div class="stat-num">347</div>
+          <div class="stat-label">Pelanggan Aktif</div>
+          <div class="stat-trend trend-down"><i class="fa-solid fa-arrow-trend-down"></i>-2,1% vs bulan lalu</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Quick Nav ── -->
+    <div class="qnav-grid animate-fadeUp d1">
+      <a class="qnav-item" href="#" onclick="showToast('info','Buka Transaksi');return false"
+        onmouseover="this.style.borderColor='#818cf8'" onmouseout="this.style.borderColor='var(--border)'">
+        <div style="width:36px;height:36px;border-radius:10px;display:grid;place-items:center;flex-shrink:0;background:rgba(99,102,241,.14);color:#818cf8">
+          <i class="fa-solid fa-receipt" style="font-size:13px"></i>
+        </div>
+        <span style="font-size:13px;font-weight:600;color:var(--text)">Transaksi</span>
+        <i class="fa-solid fa-chevron-right" style="margin-left:auto;font-size:10px;color:var(--muted)"></i>
+      </a>
+      <a class="qnav-item" href="#" onclick="showToast('info','Buka Produk');return false"
+        onmouseover="this.style.borderColor='#34d399'" onmouseout="this.style.borderColor='var(--border)'">
+        <div style="width:36px;height:36px;border-radius:10px;display:grid;place-items:center;flex-shrink:0;background:rgba(16,185,129,.14);color:#34d399">
+          <i class="fa-solid fa-cubes" style="font-size:13px"></i>
+        </div>
+        <span style="font-size:13px;font-weight:600;color:var(--text)">Produk</span>
+        <i class="fa-solid fa-chevron-right" style="margin-left:auto;font-size:10px;color:var(--muted)"></i>
+      </a>
+      <a class="qnav-item" href="#" onclick="showToast('info','Buka Pelanggan');return false"
+        onmouseover="this.style.borderColor='#f87171'" onmouseout="this.style.borderColor='var(--border)'">
+        <div style="width:36px;height:36px;border-radius:10px;display:grid;place-items:center;flex-shrink:0;background:rgba(239,68,68,.14);color:#f87171">
+          <i class="fa-solid fa-users" style="font-size:13px"></i>
+        </div>
+        <span style="font-size:13px;font-weight:600;color:var(--text)">Pelanggan</span>
+        <i class="fa-solid fa-chevron-right" style="margin-left:auto;font-size:10px;color:var(--muted)"></i>
+      </a>
+      <a class="qnav-item" href="#" onclick="showToast('info','Buka Laporan');return false"
+        onmouseover="this.style.borderColor='var(--ac)'" onmouseout="this.style.borderColor='var(--border)'">
+        <div class="a-bg-lt a-text" style="width:36px;height:36px;border-radius:10px;display:grid;place-items:center;flex-shrink:0">
+          <i class="fa-solid fa-chart-line" style="font-size:13px"></i>
+        </div>
+        <span style="font-size:13px;font-weight:600;color:var(--text)">Laporan</span>
+        <i class="fa-solid fa-chevron-right" style="margin-left:auto;font-size:10px;color:var(--muted)"></i>
+      </a>
+    </div>
+
+    <!-- ── Chart + Top Produk ── -->
+    <div class="two-col animate-fadeUp d2">
+
+      <!-- Grafik Penjualan -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><i class="fa-solid fa-chart-line a-text" style="margin-right:8px"></i>Grafik Penjualan</div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <button onclick="setChartPeriod('minggu',this)" class="chart-period-btn active"
+              style="font-size:12px;font-weight:600;padding:5px 12px;border-radius:8px;border:none;cursor:pointer;background:var(--ac-lt);color:var(--ac);font-family:inherit">Minggu</button>
+            <button onclick="setChartPeriod('bulan',this)" class="chart-period-btn"
+              style="font-size:12px;font-weight:600;padding:5px 12px;border-radius:8px;border:none;cursor:pointer;background:var(--surface2);color:var(--muted);font-family:inherit">Bulan</button>
+            <button onclick="setChartPeriod('tahun',this)" class="chart-period-btn"
+              style="font-size:12px;font-weight:600;padding:5px 12px;border-radius:8px;border:none;cursor:pointer;background:var(--surface2);color:var(--muted);font-family:inherit">Tahun</button>
+          </div>
+        </div>
+        <div class="card-body" style="padding:20px 16px">
+          <canvas id="salesChart" height="240"></canvas>
+        </div>
+      </div>
+
+      <!-- Top Produk -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><i class="fa-solid fa-trophy a-text" style="margin-right:8px"></i>Top Produk</div>
+          <span style="font-size:11px;padding:3px 10px;border-radius:99px;background:var(--surface2);color:var(--muted)">Bulan Ini</span>
+        </div>
+        <div style="padding:8px 0">
+          <!-- Items -->
+          <div id="top-produk-list">
+            <!-- JS will render -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Transaksi Terbaru + Stok Kritis ── -->
+    <div class="two-col animate-fadeUp d3">
+
+      <!-- Transaksi Terbaru -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><i class="fa-solid fa-clock-rotate-left a-text" style="margin-right:8px"></i>Transaksi Terbaru</div>
+          <button onclick="showToast('info','Lihat semua transaksi')"
+            style="font-size:12px;font-weight:600;padding:5px 12px;border-radius:8px;border:none;cursor:pointer;background:var(--surface2);color:var(--muted);font-family:inherit;transition:color .15s"
+            onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted)'">
+            Lihat Semua <i class="fa-solid fa-arrow-right" style="font-size:10px"></i>
+          </button>
+        </div>
+        <div style="overflow-x:auto">
+          <table class="tbl">
+            <thead>
+              <tr>
+                <th>ID Transaksi</th>
+                <th>Pelanggan</th>
+                <th>Produk</th>
+                <th>Total</th>
+                <th>Status</th>
+                <th>Waktu</th>
+              </tr>
+            </thead>
+            <tbody id="transaksi-tbody">
+              <!-- JS will render -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Stok Kritis -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">
+            <i class="fa-solid fa-triangle-exclamation" style="color:#f87171;margin-right:8px"></i>Stok Kritis
+          </div>
+          <span style="font-size:11px;padding:3px 10px;border-radius:99px;background:rgba(239,68,68,.12);color:#f87171;font-weight:600">5 Produk</span>
+        </div>
+        <div style="padding:8px 0" id="stok-kritis-list">
+          <!-- JS will render -->
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Ringkasan Mingguan ── -->
+    <div class="card animate-fadeUp d4">
+      <div class="card-header">
+        <div class="card-title"><i class="fa-solid fa-calendar-week a-text" style="margin-right:8px"></i>Ringkasan Penjualan Minggu Ini</div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:12px;padding:20px">
+        <!-- JS render -->
+        <div id="weekly-bars" style="display:contents"></div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+
+<!-- ══════════════════ MODAL TRANSAKSI BARU ══════════════════ -->
+<div class="modal-backdrop" id="modal-transaksi" onclick="if(event.target===this)closeModal('modal-transaksi')">
+  <div class="modal-box">
+    <div style="padding:20px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+      <div>
+        <div class="font-display" style="font-size:16px;font-weight:700;color:var(--text)">Transaksi Baru</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:1px">Catat penjualan produk</div>
+      </div>
+      <button onclick="closeModal('modal-transaksi')"
+        style="width:32px;height:32px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);cursor:pointer;color:var(--muted);font-size:13px">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+    <div style="padding:20px 24px;display:flex;flex-direction:column;gap:14px">
+      <div>
+        <label class="f-label">Pelanggan</label>
+        <input class="f-input" type="text" placeholder="Cari nama atau ID pelanggan...">
+      </div>
+      <div>
+        <label class="f-label">Produk</label>
+        <select class="f-input">
+          <option value="">— Pilih produk —</option>
+          <option>Kopi Arabika 250g</option>
+          <option>Kopi Robusta 500g</option>
+          <option>Teh Hijau Premium</option>
+          <option>Gula Aren 1kg</option>
+        </select>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div>
+          <label class="f-label">Jumlah</label>
+          <input class="f-input" type="number" value="1" min="1">
+        </div>
+        <div>
+          <label class="f-label">Metode Bayar</label>
+          <select class="f-input">
+            <option>Tunai</option>
+            <option>Transfer</option>
+            <option>QRIS</option>
+            <option>Kredit</option>
+          </select>
+        </div>
+      </div>
+      <div>
+        <label class="f-label">Catatan</label>
+        <textarea class="f-input" rows="2" placeholder="Catatan tambahan (opsional)..." style="resize:none"></textarea>
+      </div>
+    </div>
+    <div style="padding:16px 24px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:flex-end">
+      <button onclick="closeModal('modal-transaksi')"
+        style="padding:9px 18px;border-radius:11px;border:1px solid var(--border);background:var(--surface2);color:var(--sub);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">
+        Batal
+      </button>
+      <button onclick="closeModal('modal-transaksi');showToast('success','Transaksi berhasil disimpan!')"
+        class="a-grad" style="padding:9px 20px;border-radius:11px;border:none;color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">
+        <i class="fa-solid fa-check" style="margin-right:6px"></i>Simpan Transaksi
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ════════ DATA ════════ */
+const topProduk = [
+  {nama:'Kopi Arabika 250g',  kategori:'Minuman', terjual:312, persen:85, warna:'#f59e0b'},
+  {nama:'Gula Aren 1kg',      kategori:'Sembako', terjual:248, persen:67, warna:'#818cf8'},
+  {nama:'Teh Hijau Premium',  kategori:'Minuman', terjual:201, persen:54, warna:'#34d399'},
+  {nama:'Kopi Robusta 500g',  kategori:'Minuman', terjual:189, persen:51, warna:'#60a5fa'},
+  {nama:'Madu Murni 250ml',   kategori:'Herbal',  terjual:143, persen:39, warna:'#f87171'},
+];
+
+const transaksiData = [
+  {id:'#TRX-2841', pelanggan:'Siti Rahma',     produk:'Kopi Arabika 250g',  total:'Rp 45.000',  status:'Lunas',   waktu:'10 mnt lalu'},
+  {id:'#TRX-2840', pelanggan:'Budi Santoso',   produk:'Gula Aren 1kg',      total:'Rp 28.000',  status:'Lunas',   waktu:'25 mnt lalu'},
+  {id:'#TRX-2839', pelanggan:'Maya Dewi',      produk:'Teh Hijau Premium',  total:'Rp 62.000',  status:'Proses',  waktu:'1 jam lalu'},
+  {id:'#TRX-2838', pelanggan:'Rudi Hartono',   produk:'Madu Murni 250ml',   total:'Rp 85.000',  status:'Lunas',   waktu:'2 jam lalu'},
+  {id:'#TRX-2837', pelanggan:'Ani Lestari',    produk:'Kopi Robusta 500g',  total:'Rp 55.000',  status:'Batal',   waktu:'3 jam lalu'},
+  {id:'#TRX-2836', pelanggan:'Dedi Kurniawan', produk:'Gula Aren 1kg',      total:'Rp 56.000',  status:'Kredit',  waktu:'4 jam lalu'},
+];
+
+const stokKritis = [
+  {nama:'Kopi Luwak 100g',  stok:3,  min:10, warna:'#f87171'},
+  {nama:'Gula Aren 500g',   stok:7,  min:15, warna:'#f87171'},
+  {nama:'Vanila Extract',   stok:2,  min:5,  warna:'#f87171'},
+  {nama:'Teh Oolong 200g',  stok:5,  min:10, warna:'#fbbf24'},
+  {nama:'Jahe Merah Bubuk', stok:8,  min:12, warna:'#fbbf24'},
+];
+
+const weeklyData = [
+  {hari:'Sen', nominal:'5,2', pct:62},
+  {hari:'Sel', nominal:'7,8', pct:93},
+  {hari:'Rab', nominal:'4,1', pct:49},
+  {hari:'Kam', nominal:'8,4', pct:100},
+  {hari:'Jum', nominal:'6,9', pct:82},
+  {hari:'Sab', nominal:'3,2', pct:38},
+  {hari:'Min', nominal:'2,1', pct:25},
+];
+
+const chartData = {
+  minggu:{
+    labels:['Sen','Sel','Rab','Kam','Jum','Sab','Min'],
+    data:[5200000,7800000,4100000,8400000,6900000,3200000,2100000]
+  },
+  bulan:{
+    labels:['Jan','Feb','Mar','Apr'],
+    data:[38500000,42100000,39800000,48700000]
+  },
+  tahun:{
+    labels:['2022','2023','2024','2025','2026'],
+    data:[320000000,415000000,398000000,520000000,210000000]
+  }
+};
+
+/* ════════ RENDER ════════ */
+function render() {
+  // Top Produk
+  const topEl = document.getElementById('top-produk-list');
+  topEl.innerHTML = topProduk.map((p,i)=>`
+    <div style="display:flex;align-items:center;gap:12px;padding:10px 20px;transition:background .12s;cursor:default"
+      onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background='transparent'">
+      <div style="width:26px;height:26px;border-radius:8px;background:${p.warna}22;color:${p.warna};display:grid;place-items:center;font-size:11px;font-weight:700;flex-shrink:0">${i+1}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.nama}</div>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:4px">
+          <div class="prog-bar" style="flex:1"><div class="prog-fill" style="width:${p.persen}%;background:${p.warna}"></div></div>
+          <span style="font-size:11px;color:var(--muted);flex-shrink:0">${p.terjual} terjual</span>
+        </div>
+      </div>
+    </div>
+  `).join('');
+
+  // Transaksi tbody
+  const statusClass = {Lunas:'badge-green',Proses:'badge-amber',Batal:'badge-red',Kredit:'badge-blue'};
+  const statusIcon  = {Lunas:'fa-check',Proses:'fa-spinner',Batal:'fa-xmark',Kredit:'fa-credit-card'};
+  document.getElementById('transaksi-tbody').innerHTML = transaksiData.map(t=>`
+    <tr>
+      <td><code style="font-size:12px;font-weight:700;color:var(--ac);font-family:monospace">${t.id}</code></td>
+      <td class="td-main">${t.pelanggan}</td>
+      <td>${t.produk}</td>
+      <td style="font-weight:600;color:var(--text)">${t.total}</td>
+      <td><span class="badge ${statusClass[t.status]||'badge-gray'}"><i class="fa-solid ${statusIcon[t.status]||'fa-circle'}" style="font-size:9px"></i>${t.status}</span></td>
+      <td style="font-size:12px">${t.waktu}</td>
+    </tr>
+  `).join('');
+
+  // Stok Kritis
+  document.getElementById('stok-kritis-list').innerHTML = stokKritis.map(s=>`
+    <div style="display:flex;align-items:center;gap:12px;padding:10px 20px;transition:background .12s"
+      onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background='transparent'">
+      <div style="width:8px;height:8px;border-radius:50%;background:${s.warna};flex-shrink:0"></div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:600;color:var(--text)">${s.nama}</div>
+        <div style="font-size:11.5px;color:var(--muted);margin-top:2px">Stok: <span style="color:${s.warna};font-weight:700">${s.stok}</span> / Min: ${s.min}</div>
+      </div>
+      <button onclick="showToast('info','Restock ${s.nama}')"
+        style="padding:5px 11px;border-radius:8px;border:1px solid ${s.warna}44;background:${s.warna}15;color:${s.warna};font-size:11.5px;font-weight:600;cursor:pointer;font-family:inherit">
+        Restock
+      </button>
+    </div>
+  `).join('');
+
+  // Weekly bars
+  document.getElementById('weekly-bars').innerHTML = weeklyData.map(d=>`
+    <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+      <div style="font-size:11px;font-weight:600;color:var(--muted)">Rp ${d.nominal}Jt</div>
+      <div style="flex:1;width:100%;min-height:80px;display:flex;align-items:flex-end">
+        <div style="width:100%;height:${d.pct}%;background:linear-gradient(180deg,var(--ac),var(--ac2));border-radius:8px 8px 4px 4px;min-height:8px;transition:height .5s ease"></div>
+      </div>
+      <div style="font-size:12px;font-weight:600;color:var(--sub)">${d.hari}</div>
+    </div>
+  `).join('');
+}
+
+/* ════════ CHART ════════ */
+let salesChart;
+function buildChart(period = 'minggu') {
+  const d = chartData[period];
+  const isDark = !document.body.classList.contains('light');
+  const gridColor = isDark ? 'rgba(255,255,255,.06)' : 'rgba(0,0,0,.05)';
+  const tickColor = isDark ? '#64748b' : '#94a3b8';
+
+  if (salesChart) salesChart.destroy();
+  salesChart = new Chart(document.getElementById('salesChart'), {
+    type: 'line',
+    data: {
+      labels: d.labels,
+      datasets: [{
+        label: 'Penjualan',
+        data: d.data,
+        borderColor: '#f59e0b',
+        backgroundColor: 'rgba(245,158,11,.12)',
+        pointBackgroundColor: '#f59e0b',
+        pointBorderColor: isDark ? '#161b27' : '#fff',
+        pointBorderWidth: 2,
+        pointRadius: 5,
+        pointHoverRadius: 7,
+        tension: 0.4,
+        fill: true,
+        borderWidth: 2.5,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: {display: false},
+        tooltip: {
+          backgroundColor: isDark ? '#1c2336' : '#fff',
+          borderColor: isDark ? '#252d42' : '#e2e8f0',
+          borderWidth: 1, titleColor: tickColor, bodyColor: isDark ? '#e2e8f0' : '#1e293b',
+          padding: 12, cornerRadius: 12, displayColors: false,
+          callbacks: {
+            label: ctx => 'Rp ' + (ctx.raw/1000000).toFixed(1) + ' Juta'
+          }
+        }
+      },
+      scales: {
+        x: {grid: {color: gridColor}, ticks: {color: tickColor, font: {size: 11, family: 'Plus Jakarta Sans'}}},
+        y: {
+          grid: {color: gridColor},
+          ticks: {
+            color: tickColor, font: {size: 11, family: 'Plus Jakarta Sans'},
+            callback: v => 'Rp ' + (v/1000000).toFixed(0) + 'Jt'
+          }
+        }
+      }
+    }
+  });
+}
+
+function setChartPeriod(period, btn) {
+  document.querySelectorAll('.chart-period-btn').forEach(b => {
+    b.style.background = 'var(--surface2)';
+    b.style.color = 'var(--muted)';
+  });
+  btn.style.background = 'var(--ac-lt)';
+  btn.style.color = 'var(--ac)';
+  buildChart(period);
+}
+
+/* ════════ SIDEBAR ════════ */
+function toggleSB() {
+  document.getElementById('sb').classList.toggle('open');
+  document.getElementById('ov').style.display =
+    document.getElementById('sb').classList.contains('open') ? 'block' : 'none';
+}
+function closeSB() {
+  document.getElementById('sb').classList.remove('open');
+  document.getElementById('ov').style.display = 'none';
+}
+function setPage(name, el) {
+  document.querySelectorAll('.nav-item').forEach(n => {
+    n.classList.remove('nav-active'); n.classList.add('nav-inactive');
+  });
+  el.classList.add('nav-active'); el.classList.remove('nav-inactive');
+  document.getElementById('page-title').textContent =
+    el.textContent.trim().replace(/\s+/g,' ').split(' ').slice(1).join(' ') || 'Dashboard';
+  closeSB();
+  showToast('info', 'Halaman: ' + el.textContent.trim().replace(/\s+/g,' '));
+}
+
+/* ════════ ACCENT COLORS ════════ */
+const accentPalette = [
+  {id:'amber',  label:'Amber',   ac:'#f59e0b', ac2:'#ef4444', rgb:'245,158,11'},
+  {id:'emerald',label:'Hijau',   ac:'#10b981', ac2:'#06b6d4', rgb:'16,185,129'},
+  {id:'blue',   label:'Biru',    ac:'#4f6ef7', ac2:'#7c3aed', rgb:'79,110,247'},
+  {id:'violet', label:'Ungu',    ac:'#8b5cf6', ac2:'#ec4899', rgb:'139,92,246'},
+  {id:'rose',   label:'Merah',   ac:'#f43f5e', ac2:'#f97316', rgb:'244,63,94'},
+  {id:'cyan',   label:'Cyan',    ac:'#06b6d4', ac2:'#3b82f6', rgb:'6,182,212'},
+  {id:'lime',   label:'Lime',    ac:'#84cc16', ac2:'#10b981', rgb:'132,204,22'},
+  {id:'pink',   label:'Pink',    ac:'#ec4899', ac2:'#8b5cf6', rgb:'236,72,153'},
+  {id:'orange', label:'Oranye',  ac:'#f97316', ac2:'#f59e0b', rgb:'249,115,22'},
+  {id:'sky',    label:'Sky',     ac:'#38bdf8', ac2:'#6366f1', rgb:'56,189,248'},
+];
+let currentAccent = 'amber';
+
+function renderSwatches() {
+  const container = document.getElementById('color-swatches');
+  container.innerHTML = accentPalette.map(c => `
+    <div class="swatch${c.id === currentAccent ? ' active' : ''}"
+      style="background:linear-gradient(135deg,${c.ac},${c.ac2})"
+      title="${c.label}" onclick="setAccent('${c.id}')">
+      <span class="check"><i class="fa-solid fa-check" style="font-size:10px"></i></span>
+    </div>
+  `).join('');
+}
+
+function setAccent(id) {
+  const c = accentPalette.find(x => x.id === id);
+  if (!c) return;
+  currentAccent = id;
+  const root = document.documentElement;
+  root.style.setProperty('--ac',  c.ac);
+  root.style.setProperty('--ac2', c.ac2);
+  root.style.setProperty('--ac-rgb', c.rgb);
+  root.style.setProperty('--ac-lt',  `rgba(${c.rgb},.14)`);
+  root.style.setProperty('--ac-lt2', `rgba(${c.rgb},.08)`);
+  renderSwatches();
+  // update chart colors
+  const period = [...document.querySelectorAll('.chart-period-btn')]
+    .find(b => b.style.background.includes('ac-lt') || b.style.color.includes('ac'))
+    ?.textContent.trim().toLowerCase() || 'minggu';
+  buildChart(period);
+  // update active nav border indicator (re-apply active style)
+  document.querySelectorAll('.nav-active').forEach(el => {
+    el.style.borderLeftColor = c.ac;
+    el.style.color = c.ac;
+    el.style.background = `rgba(${c.rgb},.14)`;
+  });
+  showToast('success', `Warna diubah ke ${c.label}`);
+}
+
+/* ════════ THEME ════════ */
+let tpOpen = false;
+function toggleTP() {
+  tpOpen = !tpOpen;
+  document.getElementById('tp').classList.toggle('hidden', !tpOpen);
+}
+document.addEventListener('click', e => {
+  if (!document.getElementById('theme-btn').contains(e.target) &&
+      !document.getElementById('tp').contains(e.target)) {
+    tpOpen = false; document.getElementById('tp').classList.add('hidden');
+  }
+});
+function setTheme(t) {
+  document.body.classList.toggle('light', t === 'light');
+  document.getElementById('tp-dark').classList.toggle('active', t === 'dark');
+  document.getElementById('tp-light').classList.toggle('active', t === 'light');
+  document.getElementById('tp-dark').style.background = t === 'dark' ? 'var(--ac-lt)' : '';
+  document.getElementById('tp-dark').style.color      = t === 'dark' ? 'var(--ac)'    : '';
+  document.getElementById('tp-light').style.background= t === 'light'? 'var(--ac-lt)' : '';
+  document.getElementById('tp-light').style.color     = t === 'light'? 'var(--ac)'    : '';
+  tpOpen = false; document.getElementById('tp').classList.add('hidden');
+  buildChart(document.querySelector('.chart-period-btn[style*="ac-lt"]')?.textContent?.trim()?.toLowerCase() || 'minggu');
+}
+
+/* ════════ MODAL ════════ */
+function openModal(id)  { document.getElementById(id).classList.add('open') }
+function closeModal(id) { document.getElementById(id).classList.remove('open') }
+
+/* ════════ TOAST ════════ */
+function showToast(type, msg) {
+  const ic = {success:'fa-circle-check',error:'fa-circle-xmark',info:'fa-circle-info'};
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.innerHTML = `<i class="fa-solid ${ic[type]||ic.info} ti" style="font-size:16px;flex-shrink:0"></i><span>${msg}</span>`;
+  document.getElementById('toast-container').appendChild(el);
+  setTimeout(() => el.style.cssText += ';opacity:0;transition:opacity .3s', 2700);
+  setTimeout(() => el.remove(), 3000);
+}
+
+/* ════════ HAMBURGER RESPONSIVE ════════ */
+function checkWidth() {
+  const hb = document.getElementById('hamburger');
+  if (window.innerWidth < 1024) { hb.style.display = 'block' }
+  else { hb.style.display = 'none'; closeSB() }
+}
+window.addEventListener('resize', checkWidth);
+
+/* ════════ INIT ════════ */
+render();
+buildChart('minggu');
+renderSwatches();
+checkWidth();
+</script>
+</body>
+</html>
