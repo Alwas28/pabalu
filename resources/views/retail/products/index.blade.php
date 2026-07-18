@@ -274,7 +274,7 @@
           {{-- Nama --}}
           <div style="grid-column:1/-1">
             <label class="f-label">Nama Produk <span style="color:var(--ac)">*</span></label>
-            <input name="name" class="f-input" required maxlength="150" placeholder="cth: Nasi Goreng Spesial">
+            <input name="name" class="f-input" required maxlength="150" placeholder="cth: Minyak Goreng 1L">
           </div>
           {{-- Kategori --}}
           <div>
@@ -290,16 +290,16 @@
           <div>
             <label class="f-label">Satuan <span style="color:var(--ac)">*</span></label>
             <input name="unit" class="f-input" required maxlength="30" value="pcs" list="unit-list-add"
-              placeholder="pcs, porsi, gelas…">
+              placeholder="pcs, botol, kg…">
             <datalist id="unit-list-add">
-              <option value="pcs"><option value="porsi"><option value="gelas"><option value="piring">
-              <option value="botol"><option value="kg"><option value="gram"><option value="liter"><option value="ml">
+              <option value="pcs"><option value="botol"><option value="kg"><option value="gram">
+              <option value="liter"><option value="ml"><option value="dus"><option value="lusin"><option value="pak">
             </datalist>
           </div>
           {{-- SKU --}}
           <div>
             <label class="f-label">SKU / Barcode <span style="color:var(--muted);font-weight:400">(opsional)</span></label>
-            <input name="sku" class="f-input" maxlength="60" placeholder="cth: NGS-001">
+            <input name="sku" class="f-input" maxlength="60" placeholder="cth: RTL-001">
           </div>
           {{-- Harga jual --}}
           <div>

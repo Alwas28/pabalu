@@ -196,8 +196,10 @@ select.f-input option{background:var(--surface2);color:var(--text)}
   {{-- Nav --}}
   <div id="sb-nav" style="padding:4px 10px 10px">
   @php
-    $pendingCount = \App\Models\Order::where('outlet_id', $outlet->id)
-        ->whereNull('user_id')->where('status', 'pending')->count();
+    $pendingCount = $outlet->enable_self_order
+        ? \App\Models\Order::where('outlet_id', $outlet->id)
+              ->whereNull('user_id')->where('status', 'pending')->count()
+        : 0;
   @endphp
 
   @if($isKasir)
@@ -217,6 +219,7 @@ select.f-input option{background:var(--surface2);color:var(--text)}
       <i class="fa-solid fa-cash-register" style="width:15px;text-align:center;font-size:13px"></i>POS / Kasir
     </a>
     @endif
+    @if($outlet->enable_self_order)
     <a href="{{ $outlet->route('self-orders.index') }}"
        class="nav-item {{ $outlet->routeIs('self-orders.*') ? 'nav-active' : 'nav-inactive' }}">
       <i class="fa-solid fa-clipboard-list" style="width:15px;text-align:center;font-size:13px;color:#f59e0b"></i>Pesanan Masuk
@@ -224,19 +227,20 @@ select.f-input option{background:var(--surface2);color:var(--text)}
       <span style="margin-left:auto;background:#ef4444;color:#fff;border-radius:99px;font-size:10px;font-weight:700;padding:1px 6px;min-width:18px;text-align:center;display:inline-block">{{ $pendingCount }}</span>
       @endif
     </a>
+    @endif
     @if($p('transaction.view'))
     <a href="{{ $outlet->route('transactions.index') }}"
        class="nav-item {{ $outlet->routeIs('transactions.*') ? 'nav-active' : 'nav-inactive' }}">
       <i class="fa-solid fa-clock-rotate-left" style="width:15px;text-align:center;font-size:13px"></i>Transaksi
     </a>
     @endif
-    @if($p('stock.in'))
+    @if($trackCogs && $p('stock.in'))
     <a href="{{ $outlet->route('stock-in.index') }}"
        class="nav-item {{ $outlet->routeIs('stock-in.*') ? 'nav-active' : 'nav-inactive' }}">
       <i class="fa-solid fa-truck-ramp-box" style="width:15px;text-align:center;font-size:13px"></i>Tambah Stok
     </a>
     @endif
-    @if($p('stock.view'))
+    @if($trackCogs && $p('stock.view'))
     <a href="{{ $outlet->route('stock.index') }}"
        class="nav-item {{ $outlet->routeIs('stock.*') ? 'nav-active' : 'nav-inactive' }}">
       <i class="fa-solid fa-warehouse" style="width:15px;text-align:center;font-size:13px"></i>Stok Barang
@@ -248,7 +252,7 @@ select.f-input option{background:var(--surface2);color:var(--text)}
       <i class="fa-solid fa-money-bill-wave" style="width:15px;text-align:center;font-size:13px"></i>Pengeluaran
     </a>
     @endif
-    @if($p('stock.waste'))
+    @if($trackCogs && $p('stock.waste'))
     <a href="{{ $outlet->route('waste.index') }}"
        class="nav-item {{ $outlet->routeIs('waste.*') ? 'nav-active' : 'nav-inactive' }}">
       <i class="fa-solid fa-box-archive" style="width:15px;text-align:center;font-size:13px"></i>Barang Rusak
@@ -297,7 +301,7 @@ select.f-input option{background:var(--surface2);color:var(--text)}
     </a>
 
     {{-- OPERASIONAL TOKO --}}
-    @if($p('pos.access') || $p('stock.in') || $p('expense.view') || $p('stock.waste'))
+    @if($p('pos.access') || ($trackCogs && $p('stock.in')) || $p('expense.view') || ($trackCogs && $p('stock.waste')))
     <p class="nav-section">Operasional Toko</p>
     @if($p('pos.access'))
     <a href="{{ $outlet->route('pos.index') }}"
@@ -305,6 +309,7 @@ select.f-input option{background:var(--surface2);color:var(--text)}
       <i class="fa-solid fa-cash-register" style="width:15px;text-align:center;font-size:13px"></i>POS / Kasir
     </a>
     @endif
+    @if($outlet->enable_self_order)
     <a href="{{ $outlet->route('self-orders.index') }}"
        class="nav-item {{ $outlet->routeIs('self-orders.*') ? 'nav-active' : 'nav-inactive' }}">
       <i class="fa-solid fa-clipboard-list" style="width:15px;text-align:center;font-size:13px;color:#f59e0b"></i>Pesanan Masuk
@@ -312,7 +317,8 @@ select.f-input option{background:var(--surface2);color:var(--text)}
       <span style="margin-left:auto;background:#ef4444;color:#fff;border-radius:99px;font-size:10px;font-weight:700;padding:1px 6px;min-width:18px;text-align:center;display:inline-block">{{ $pendingCount }}</span>
       @endif
     </a>
-    @if($p('stock.in'))
+    @endif
+    @if($trackCogs && $p('stock.in'))
     <a href="{{ $outlet->route('stock-in.index') }}"
        class="nav-item {{ $outlet->routeIs('stock-in.*') ? 'nav-active' : 'nav-inactive' }}">
       <i class="fa-solid fa-truck-ramp-box" style="width:15px;text-align:center;font-size:13px"></i>Tambah Stok
@@ -324,7 +330,7 @@ select.f-input option{background:var(--surface2);color:var(--text)}
       <i class="fa-solid fa-money-bill-wave" style="width:15px;text-align:center;font-size:13px"></i>Pengeluaran
     </a>
     @endif
-    @if($p('stock.waste'))
+    @if($trackCogs && $p('stock.waste'))
     <a href="{{ $outlet->route('waste.index') }}"
        class="nav-item {{ $outlet->routeIs('waste.*') ? 'nav-active' : 'nav-inactive' }}">
       <i class="fa-solid fa-box-archive" style="width:15px;text-align:center;font-size:13px"></i>Barang Rusak
@@ -348,12 +354,12 @@ select.f-input option{background:var(--surface2);color:var(--text)}
     @endif
 
     {{-- PRODUK & STOK --}}
-    @if($p('product.view') || $p('category.view') || $p('stock.view'))
-    <p class="nav-section">Produk &amp; Stok</p>
+    @if($p('product.view') || $p('category.view') || ($trackCogs && $p('stock.view')))
+    <p class="nav-section">{{ $trackCogs ? 'Produk & Stok' : 'Produk & Layanan' }}</p>
     @if($p('product.view'))
     <a href="{{ $outlet->route('products.index') }}"
        class="nav-item {{ $outlet->routeIs('products.*') ? 'nav-active' : 'nav-inactive' }}">
-      <i class="fa-solid fa-cubes" style="width:15px;text-align:center;font-size:13px"></i>Produk
+      <i class="fa-solid fa-cubes" style="width:15px;text-align:center;font-size:13px"></i>{{ $trackCogs ? 'Produk' : 'Layanan' }}
     </a>
     @endif
     @if($p('category.view'))
@@ -362,7 +368,7 @@ select.f-input option{background:var(--surface2);color:var(--text)}
       <i class="fa-solid fa-tags" style="width:15px;text-align:center;font-size:13px"></i>Kategori
     </a>
     @endif
-    @if($p('stock.view'))
+    @if($trackCogs && $p('stock.view'))
     <a href="{{ $outlet->route('stock.index') }}"
        class="nav-item {{ $outlet->routeIs('stock.*') ? 'nav-active' : 'nav-inactive' }}">
       <i class="fa-solid fa-warehouse" style="width:15px;text-align:center;font-size:13px"></i>Stok &amp; Pergerakan
@@ -549,6 +555,7 @@ renderSwatches();
 @if(session('info'))showToast('info',@json(session('info')));@endif
 </script>
 
+<x-system-report-fab />
 @stack('scripts')
 </body>
 </html>

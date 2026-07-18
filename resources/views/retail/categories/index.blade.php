@@ -178,7 +178,7 @@
       <div style="padding:20px 24px;display:flex;flex-direction:column;gap:14px">
         <div>
           <label class="f-label">Nama Kategori <span style="color:var(--ac)">*</span></label>
-          <input name="name" class="f-input" required maxlength="100" placeholder="cth: Minuman, Makanan Berat, Snack…" autofocus>
+          <input name="name" class="f-input" required maxlength="100" placeholder="cth: Sembako, Minuman, Elektronik, Pakaian…" autofocus>
         </div>
         <div>
           <label class="f-label">Deskripsi <span style="color:var(--muted);font-weight:400">(opsional)</span></label>

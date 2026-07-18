@@ -4,8 +4,11 @@
 <x-outlet-layout :outlet="$outlet" :pageTitle="$pageLabel">
 
 @php
-  $isOwner    = Auth::user()->role === 'owner' || Auth::user()->role === 'admin';
-  $isRetail   = $outlet->isRetailFlow();
+  $isOwner       = Auth::user()->role === 'owner' || Auth::user()->role === 'admin';
+  $isRetail      = $outlet->isRetailFlow();
+  $isSystemAdmin = Auth::user()->role === 'admin';
+  $adminContact  = $isSystemAdmin ? null : \App\Models\User::whereHas('roleRelation', fn($q) => $q->where('slug', 'admin'))->first();
+  $adminWaPhone  = $adminContact?->phone ? preg_replace('/^0/', '62', preg_replace('/[^0-9]/', '', $adminContact->phone)) : null;
 @endphp
 
 <x-outlet-menu-qr :outlet="$outlet" />
@@ -220,18 +223,54 @@
       ['enable_transfer', 'Transfer Bank', 'fa-building-columns', 'Pelanggan transfer ke rekening outlet, kasir input nomor referensi & upload foto bukti transfer.'],
       ['enable_card', 'Kartu (EDC)', 'fa-credit-card', 'Pembayaran via mesin EDC, kasir input nomor referensi & upload foto struk EDC.'],
     ] as $i => [$field, $label, $icon, $desc])
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 0;{{ $i < 3 ? 'border-bottom:1px solid var(--border)' : '' }}">
+    @php $isQrisPay = $field === 'enable_qris_pay'; $canToggle = !$isQrisPay || $isSystemAdmin; @endphp
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 0;{{ $i < 3 ? 'border-bottom:1px solid var(--border)' : '' }}{{ !$canToggle ? ';opacity:.75' : '' }}">
       <div style="flex:1;padding-right:24px">
         <div style="font-size:14px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:8px">
-          <i class="fa-solid {{ $icon }}" style="color:var(--ac);font-size:13px"></i>{{ $label }}
+          <i class="fa-solid {{ $icon }}" style="color:{{ $canToggle ? 'var(--ac)' : 'var(--muted)' }};font-size:13px"></i>{{ $label }}
+          @if($isQrisPay && !$isSystemAdmin)
+          <span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:99px;background:rgba(239,68,68,.12);color:#f87171">
+            <i class="fa-solid fa-lock" style="font-size:9px;margin-right:2px"></i>Admin Only
+          </span>
+          @endif
         </div>
         <div style="font-size:12.5px;color:var(--muted);margin-top:4px;line-height:1.6">{{ $desc }}</div>
+        @if($isQrisPay && !$isSystemAdmin)
+        <div style="font-size:12px;color:#f87171;margin-top:5px;display:flex;align-items:center;gap:5px">
+          <i class="fa-solid fa-circle-info" style="font-size:11px"></i>
+          Hanya Administrator yang dapat mengaktifkan fitur ini.
+        </div>
+        @if($adminContact)
+        <div style="margin-top:8px;padding:10px 12px;border-radius:10px;background:var(--surface2);border:1px solid var(--border);display:flex;align-items:center;gap:10px">
+          <div style="width:32px;height:32px;border-radius:50%;background:var(--ac-lt);color:var(--ac);display:grid;place-items:center;flex-shrink:0">
+            <i class="fa-solid fa-user-shield" style="font-size:13px"></i>
+          </div>
+          <div>
+            <div style="font-size:11px;color:var(--muted);margin-bottom:2px">Hubungi Administrator:</div>
+            <div style="font-size:12.5px;font-weight:700;color:var(--text)">{{ $adminContact->name }}</div>
+            <div style="display:flex;gap:10px;margin-top:4px;flex-wrap:wrap">
+              @if($adminContact->email)
+              <a href="mailto:{{ $adminContact->email }}" style="font-size:11px;color:var(--ac);text-decoration:none;display:flex;align-items:center;gap:4px">
+                <i class="fa-solid fa-envelope" style="font-size:10px"></i>{{ $adminContact->email }}
+              </a>
+              @endif
+              @if($adminWaPhone)
+              <a href="https://wa.me/{{ $adminWaPhone }}" target="_blank" rel="noopener" style="font-size:11px;color:#25d366;text-decoration:none;display:flex;align-items:center;gap:4px">
+                <i class="fa-brands fa-whatsapp" style="font-size:12px"></i>{{ $adminContact->phone }}
+              </a>
+              @endif
+            </div>
+          </div>
+        </div>
+        @endif
+        @endif
       </div>
-      <label style="position:relative;display:inline-block;width:48px;height:26px;flex-shrink:0;cursor:pointer">
+      <label style="position:relative;display:inline-block;width:48px;height:26px;flex-shrink:0;cursor:{{ $canToggle ? 'pointer' : 'not-allowed' }}">
         <input type="checkbox" name="{{ $field }}" value="1" id="toggle-{{ $field }}"
           {{ $outlet->{$field} ? 'checked' : '' }}
+          {{ !$canToggle ? 'disabled' : '' }}
           style="opacity:0;width:0;height:0;position:absolute"
-          @if($field === 'enable_qris_pay') onchange="toggleMidtransCard(this.checked)" @endif>
+          @if($field === 'enable_qris_pay' && $isSystemAdmin) onchange="toggleMidtransCard(this.checked)" @endif>
         <span id="track-{{ $field }}" style="position:absolute;inset:0;border-radius:99px;transition:background .2s;background:{{ $outlet->{$field} ? 'var(--ac)' : 'var(--border)' }}"></span>
         <span id="thumb-{{ $field }}" style="position:absolute;top:3px;left:{{ $outlet->{$field} ? '25px' : '3px' }};width:20px;height:20px;border-radius:50%;background:#fff;transition:left .2s;box-shadow:0 1px 4px rgba(0,0,0,.25)"></span>
       </label>

@@ -347,6 +347,10 @@ select.f-input option{background:var(--surface2);color:var(--text)}
   $showReports     = $canRptSales || $canRptStock || $canRptPL;
 
   $requiresOpening = false;
+  $systemReportUnread = $isAdmin ? \App\Models\SystemReport::where('status', 'unread')->count() : 0;
+  $chatUnread = $isAdmin
+    ? \App\Models\ChatMessage::whereNull('read_at')->whereColumn('sender_id', 'owner_id')->count()
+    : 0;
 
   $roleLabels = [
     'admin'        => 'Administrator',
@@ -517,6 +521,36 @@ select.f-input option{background:var(--surface2);color:var(--text)}
        class="nav-item {{ request()->routeIs('partners.*') ? 'nav-active' : 'nav-inactive' }}">
       <i class="fa-solid fa-handshake" style="width:15px;text-align:center;font-size:13px"></i>Mitra UMKM
     </a>
+    <a href="{{ route('owners.index') }}"
+       class="nav-item {{ request()->routeIs('owners.*') ? 'nav-active' : 'nav-inactive' }}">
+      <i class="fa-solid fa-users" style="width:15px;text-align:center;font-size:13px"></i>Daftar Owner
+    </a>
+    <a href="{{ route('chat.index') }}"
+       class="nav-item {{ request()->routeIs('chat.*') ? 'nav-active' : 'nav-inactive' }}"
+       style="display:flex;align-items:center;justify-content:space-between">
+      <span style="display:flex;align-items:center;gap:8px">
+        <i class="fa-solid fa-comments" style="width:15px;text-align:center;font-size:13px"></i>Chat Owner
+      </span>
+      @if($chatUnread)
+      <span style="font-size:9.5px;font-weight:800;padding:1px 7px;border-radius:99px;
+                   background:rgba(var(--ac-rgb),.18);color:var(--ac);line-height:1.5">
+        {{ $chatUnread }}
+      </span>
+      @endif
+    </a>
+    <a href="{{ route('system-reports.index') }}"
+       class="nav-item {{ request()->routeIs('system-reports.*') ? 'nav-active' : 'nav-inactive' }}"
+       style="display:flex;align-items:center;justify-content:space-between">
+      <span style="display:flex;align-items:center;gap:8px">
+        <i class="fa-solid fa-headset" style="width:15px;text-align:center;font-size:13px"></i>Laporan Sistem
+      </span>
+      @if($systemReportUnread)
+      <span style="font-size:9.5px;font-weight:800;padding:1px 7px;border-radius:99px;
+                   background:rgba(245,158,11,.18);color:#f59e0b;line-height:1.5">
+        {{ $systemReportUnread }}
+      </span>
+      @endif
+    </a>
     @endif
     @if($isOwner || $isAdmin)
     <a href="{{ route('employees.index') }}"
@@ -676,7 +710,7 @@ select.f-input option{background:var(--surface2);color:var(--text)}
               <i class="fa-solid fa-user" style="width:15px;text-align:center;color:var(--muted);font-size:13px"></i>
               Profile
             </a>
-            <a href="{{ route('profile.edit') }}#update-password" onclick="closeProfMenu()"
+            <a href="{{ route('profile.password') }}" onclick="closeProfMenu()"
               style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:9px;text-decoration:none;color:var(--sub);font-size:13px;transition:background .15s"
               onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background='transparent'">
               <i class="fa-solid fa-key" style="width:15px;text-align:center;color:var(--muted);font-size:13px"></i>
@@ -923,6 +957,7 @@ renderSwatches();
 @endif
 </script>
 
+<x-system-report-fab />
 @stack('scripts')
 
 </body>

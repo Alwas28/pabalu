@@ -1,11 +1,12 @@
-<x-outlet-layout :outlet="$outlet" pageTitle="Laporan Penjualan">
+<x-laundry-layout :outlet="$outlet" pageTitle="Laporan Pendapatan">
 
 @php
   $paymentMeta = [
-    'cash'     => ['label'=>'Tunai',    'icon'=>'fa-money-bill-wave',  'color'=>'#34d399'],
-    'qris'     => ['label'=>'QRIS',     'icon'=>'fa-qrcode',           'color'=>'#818cf8'],
-    'transfer' => ['label'=>'Transfer', 'icon'=>'fa-building-columns', 'color'=>'#60a5fa'],
-    'card'     => ['label'=>'Kartu',    'icon'=>'fa-credit-card',      'color'=>'#f59e0b'],
+    'cash'          => ['label'=>'Tunai',          'icon'=>'fa-money-bill-wave',  'color'=>'#34d399'],
+    'qris_transfer' => ['label'=>'QRIS Transfer',  'icon'=>'fa-qrcode',           'color'=>'#818cf8'],
+    'qris_pay'      => ['label'=>'QRIS Pay',       'icon'=>'fa-bolt',             'color'=>'#a78bfa'],
+    'transfer'      => ['label'=>'Transfer Bank',  'icon'=>'fa-building-columns', 'color'=>'#60a5fa'],
+    'card'          => ['label'=>'Kartu',          'icon'=>'fa-credit-card',      'color'=>'#f59e0b'],
   ];
 
   // Untuk chart harian
@@ -117,7 +118,7 @@ document.addEventListener('DOMContentLoaded', rebuildChart);
 {{-- ── HEADER ── --}}
 <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px">
   <div>
-    <h2 class="font-display" style="font-size:20px;font-weight:700;color:var(--text)">Laporan Penjualan</h2>
+    <h2 class="font-display" style="font-size:20px;font-weight:700;color:var(--text)">Laporan Pendapatan</h2>
     <p style="font-size:13px;color:var(--muted);margin-top:2px">
       {{ \Carbon\Carbon::parse($from)->translatedFormat('d M Y') }} –
       {{ \Carbon\Carbon::parse($to)->translatedFormat('d M Y') }}
@@ -385,10 +386,10 @@ document.addEventListener('DOMContentLoaded', rebuildChart);
         @php $pm = $paymentMeta[$trx->payment_method] ?? ['label'=>$trx->payment_method,'color'=>'#94a3b8']; @endphp
         <tr>
           <td>
-            <div style="font-weight:600;font-size:13px;color:var(--text)">{{ $trx->date->translatedFormat('d M Y') }}</div>
-            <div style="font-size:11px;color:var(--muted)">{{ $trx->created_at->format('H:i') }}</div>
+            <div style="font-weight:600;font-size:13px;color:var(--text)">{{ $trx->paid_at->translatedFormat('d M Y') }}</div>
+            <div style="font-size:11px;color:var(--muted)">{{ $trx->paid_at->format('H:i') }}</div>
           </td>
-          <td style="font-size:12px;color:var(--sub);font-family:monospace">{{ $trx->transaction_number }}</td>
+          <td style="font-size:12px;color:var(--sub);font-family:monospace">{{ $trx->order_number }}</td>
           <td style="font-size:12.5px;color:var(--sub)">
             {{ $trx->items->map(fn($i) => $i->product_name.' x'.$i->qty)->implode(', ') }}
           </td>
@@ -414,4 +415,4 @@ document.addEventListener('DOMContentLoaded', rebuildChart);
   @endif
 </div>
 
-</x-outlet-layout>
+</x-laundry-layout>

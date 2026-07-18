@@ -102,7 +102,7 @@
   {{-- Product grid --}}
   <div id="prod-grid" class="prod-grid">
     @forelse($products as $p)
-    <div class="prod-card {{ $p->stock <= 0 ? 'out-of-stock' : '' }}"
+    <div class="prod-card {{ ($trackCogs && $p->stock <= 0) ? 'out-of-stock' : '' }}"
       id="pcard-{{ $p->id }}"
       data-id="{{ $p->id }}"
       data-name="{{ $p->name }}"
@@ -122,12 +122,14 @@
         @endunless
       </div>
 
-      {{-- Stock badge (updated by JS after purchase) --}}
+      {{-- Stock badge (hanya jika track stok) --}}
       <span id="stock-badge-{{ $p->id }}">
-      @if($p->stock <= 0)
-        <span style="position:absolute;top:8px;left:8px;background:#ef4444;color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:99px">HABIS</span>
-      @elseif($p->isLowStock())
-        <span style="position:absolute;top:8px;left:8px;background:#f97316;color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:99px">{{ $p->stock }} tersisa</span>
+      @if($trackCogs)
+        @if($p->stock <= 0)
+          <span style="position:absolute;top:8px;left:8px;background:#ef4444;color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:99px">HABIS</span>
+        @elseif($p->isLowStock())
+          <span style="position:absolute;top:8px;left:8px;background:#f97316;color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:99px">{{ $p->stock }} tersisa</span>
+        @endif
       @endif
       </span>
 
@@ -136,7 +138,9 @@
 
       <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px;line-height:1.3">{{ $p->name }}</div>
       <div style="font-size:13.5px;font-weight:800;color:var(--ac)">Rp {{ number_format($p->price, 0, ',', '.') }}</div>
+      @if($trackCogs)
       <div id="stock-txt-{{ $p->id }}" style="font-size:11px;color:var(--muted);margin-top:2px">Stok: {{ $p->stock }} {{ $p->unit }}</div>
+      @endif
     </div>
     @empty
     <div style="grid-column:1/-1;padding:48px;text-align:center">
@@ -494,6 +498,7 @@
 @push('scripts')
 <script>
 // ── State ──────────────────────────────────────────────
+const TRACK_COGS = {{ $trackCogs ? 'true' : 'false' }};
 let cart        = [];  // [{id,name,price,qty,stock,unit,image}]
 let discMode    = 'percent';
 let currentMethod = 'cash';
@@ -521,10 +526,10 @@ function getTotal() { return Math.max(0, getSubtotal() - getDiscount()); }
 // ── Cart operations ────────────────────────────────────
 function cardClick(id) {
   const card = document.getElementById('pcard-' + id);
-  if (card.classList.contains('out-of-stock')) return;
+  if (TRACK_COGS && card.classList.contains('out-of-stock')) return;
   const existing = cart.find(i => i.id === id);
   if (existing) {
-    if (existing.qty >= existing.stock) {
+    if (TRACK_COGS && existing.qty >= existing.stock) {
       showToast('error', `Stok ${existing.name} hanya ${existing.stock}`);
       return;
     }
@@ -543,7 +548,7 @@ function cardClick(id) {
 function setQty(id, val) {
   const item = cart.find(i => i.id === id);
   if (!item) return;
-  const qty = Math.max(1, Math.min(item.stock, parseInt(val) || 1));
+  const qty = TRACK_COGS ? Math.max(1, Math.min(item.stock, parseInt(val) || 1)) : Math.max(1, parseInt(val) || 1);
   item.qty = qty;
   renderCart();
 }
@@ -553,7 +558,7 @@ function stepQty(id, delta) {
   if (!item) return;
   const next = item.qty + delta;
   if (next < 1) { removeItem(id); return; }
-  if (next > item.stock) { showToast('error', `Stok ${item.name} hanya ${item.stock}`); return; }
+  if (TRACK_COGS && next > item.stock) { showToast('error', `Stok ${item.name} hanya ${item.stock}`); return; }
   item.qty = next;
   renderCart();
 }
@@ -666,7 +671,7 @@ function renderCart() {
       </div>
       <div class="qty-ctrl" style="gap:0;flex-shrink:0">
         <button class="qty-btn" onclick="stepQty(${item.id},-1)"><i class="fa-solid fa-minus" style="font-size:9px"></i></button>
-        <input type="number" value="${item.qty}" min="1" max="${item.stock}"
+        <input type="number" value="${item.qty}" min="1" max="${TRACK_COGS ? item.stock : 9999}"
           style="width:36px;height:26px;border-top:1px solid var(--border);border-bottom:1px solid var(--border);border-left:none;border-right:none;background:var(--surface);color:var(--text);text-align:center;font-size:13px;font-weight:700;outline:none;-moz-appearance:textfield"
           onchange="setQty(${item.id},this.value)">
         <button class="qty-btn" onclick="stepQty(${item.id},1)"><i class="fa-solid fa-plus" style="font-size:9px"></i></button>
@@ -755,6 +760,7 @@ function setDiscountMode(mode) {
 
 // ── Stock update (after purchase) ─────────────────────
 function updateCardStock(id, soldQty, unit) {
+  if (!TRACK_COGS) return;
   const card = document.getElementById('pcard-' + id);
   if (!card) return;
   const newStock  = Math.max(0, parseInt(card.dataset.stock) - soldQty);

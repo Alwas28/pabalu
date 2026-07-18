@@ -274,7 +274,7 @@
           {{-- Nama --}}
           <div style="grid-column:1/-1">
             <label class="f-label">Nama Produk <span style="color:var(--ac)">*</span></label>
-            <input name="name" class="f-input" required maxlength="150" placeholder="cth: Nasi Goreng Spesial">
+            <input name="name" class="f-input" required maxlength="150" placeholder="cth: Potong Rambut">
           </div>
           {{-- Kategori --}}
           <div>
@@ -289,11 +289,11 @@
           {{-- Satuan --}}
           <div>
             <label class="f-label">Satuan <span style="color:var(--ac)">*</span></label>
-            <input name="unit" class="f-input" required maxlength="30" value="pcs" list="unit-list-add"
-              placeholder="pcs, porsi, gelas…">
+            <input name="unit" class="f-input" required maxlength="30" value="sesi" list="unit-list-add"
+              placeholder="sesi, paket, pcs…">
             <datalist id="unit-list-add">
-              <option value="pcs"><option value="porsi"><option value="gelas"><option value="piring">
-              <option value="botol"><option value="kg"><option value="gram"><option value="liter"><option value="ml">
+              <option value="sesi"><option value="paket"><option value="pcs"><option value="kali">
+              <option value="orang"><option value="jam"><option value="menit">
             </datalist>
           </div>
           {{-- SKU --}}
@@ -323,12 +323,14 @@
             </div>
           </div>
           @endif
-          {{-- Min stok --}}
+          {{-- Min stok (hanya jika track stok) --}}
+          @if($trackCogs)
           <div>
             <label class="f-label">Min. Stok Kritis <span style="color:var(--muted);font-weight:400">(opsional)</span></label>
             <input name="min_stock" type="number" class="f-input" value="0" min="0">
             <p style="font-size:11px;color:var(--muted);margin-top:3px">Alert jika stok ≤ nilai ini</p>
           </div>
+          @endif
           {{-- Deskripsi --}}
           <div style="grid-column:1/-1">
             <label class="f-label">Deskripsi <span style="color:var(--muted);font-weight:400">(opsional)</span></label>
@@ -437,11 +439,13 @@
             </div>
           </div>
           @endif
+          @if($trackCogs)
           <div>
             <label class="f-label">Min. Stok Kritis</label>
             <input name="min_stock" id="e-min" type="number" class="f-input" min="0">
             <p style="font-size:11px;color:var(--muted);margin-top:3px">Alert jika stok ≤ nilai ini</p>
           </div>
+          @endif
           <div style="grid-column:1/-1">
             <label class="f-label">Deskripsi</label>
             <textarea name="description" id="e-desc" class="f-input" rows="2" maxlength="1000"></textarea>
@@ -566,7 +570,7 @@ function openEdit(id, d) {
   document.getElementById('e-name').value = d.name  || '';
   document.getElementById('e-unit').value = d.unit  || 'pcs';
   document.getElementById('e-sku').value  = d.sku   || '';
-  document.getElementById('e-min').value  = d.min_stock ?? 0;
+  const eMin = document.getElementById('e-min'); if (eMin) eMin.value = d.min_stock ?? 0;
   document.getElementById('e-desc').value = d.description || '';
   const catEl = document.getElementById('e-cat');
   if (catEl) catEl.value = d.category_id ?? '';

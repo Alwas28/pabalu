@@ -103,7 +103,9 @@
         <span style="font-size:11px;color:var(--muted)">Semua outlet</span>
       </div>
       <div style="padding:20px">
-        <canvas id="chart-weekly" height="200"></canvas>
+        <div style="position:relative;height:280px">
+          <canvas id="chart-weekly"></canvas>
+        </div>
       </div>
     </div>
 
@@ -228,6 +230,7 @@
     },
     options: {
       responsive: true,
+      maintainAspectRatio: false,
       interaction: { mode: 'index', intersect: false },
       plugins: { legend: { labels: { color: tc, font: { size: 12, family: "'Plus Jakarta Sans',sans-serif" } } } },
       scales: {
@@ -419,7 +422,9 @@
         <span style="font-size:11px;color:var(--muted)">Semua outlet</span>
       </div>
       <div style="padding:20px">
-        <canvas id="chart-weekly" height="200"></canvas>
+        <div style="position:relative;height:280px">
+          <canvas id="chart-weekly-owner"></canvas>
+        </div>
       </div>
     </div>
 
@@ -469,7 +474,7 @@
   const gc = dark ? 'rgba(255,255,255,.06)' : 'rgba(0,0,0,.06)';
   const tc = dark ? '#64748b' : '#94a3b8';
   const acRgb = getComputedStyle(document.documentElement).getPropertyValue('--ac-rgb').trim();
-  const ctx = document.getElementById('chart-weekly').getContext('2d');
+  const ctx = document.getElementById('chart-weekly-owner').getContext('2d');
   const chart = new Chart(ctx, {
     type: 'bar',
     data: {
@@ -500,6 +505,7 @@
     },
     options: {
       responsive: true,
+      maintainAspectRatio: false,
       interaction: { mode: 'index', intersect: false },
       plugins: { legend: { labels: { color: tc, font: { size: 12, family: "'Plus Jakarta Sans',sans-serif" } } } },
       scales: {

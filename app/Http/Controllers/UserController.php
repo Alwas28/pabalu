@@ -7,7 +7,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\Rules;
+use Illuminate\Validation\Rules\Password;
 use Illuminate\View\View;
 
 class UserController extends Controller
@@ -119,23 +119,13 @@ class UserController extends Controller
             'role'  => ['required', 'in:' . implode(',', $this->allowedRoles())],
         ];
 
-        if ($request->filled('password')) {
-            $rules['password'] = ['confirmed', Rules\Password::defaults()];
-        }
-
         $validated = $request->validate($rules);
 
-        $data = [
+        $user->update([
             'name'  => $validated['name'],
             'email' => $validated['email'],
             'role'  => $validated['role'],
-        ];
-
-        if ($request->filled('password')) {
-            $data['password'] = Hash::make($validated['password']);
-        }
-
-        $user->update($data);
+        ]);
 
         // Jika role diubah ke admin dan belum terverifikasi → auto-verify
         if ($validated['role'] === 'admin' && !$user->fresh()->hasVerifiedEmail()) {
@@ -159,10 +149,28 @@ class UserController extends Controller
         }
 
         $name = $user->name;
-        $user->delete();
+
+        try {
+            $user->delete();
+        } catch (\Illuminate\Database\QueryException $e) {
+            return back()->with('error', "User \"{$name}\" tidak dapat dihapus karena masih memiliki data terkait (transaksi, shift, atau laporan).");
+        }
 
         return redirect()->route('users.index')
             ->with('success', "User \"{$name}\" berhasil dihapus.");
+    }
+
+    public function updatePassword(Request $request, User $user): RedirectResponse
+    {
+        $this->authorizeAdmin();
+
+        $request->validate([
+            'password' => ['required', 'confirmed', Password::defaults()],
+        ]);
+
+        $user->update(['password' => Hash::make($request->password)]);
+
+        return back()->with('success', "Password \"{$user->name}\" berhasil diperbarui.");
     }
 
     // Admin verifikasi email user secara manual

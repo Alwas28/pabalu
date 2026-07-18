@@ -35,44 +35,33 @@ class ProfitLossController extends Controller
         }
 
         $outlet->load('outletType');
-        $trackCogs = $outlet->outletType?->track_cogs ?? false;
+        $trackCogs = false; // laundry tidak memakai track_cogs
 
         $from = $request->input('from', today()->startOfMonth()->format('Y-m-d'));
         $to   = $request->input('to',   today()->format('Y-m-d'));
 
-        // â”€â”€ PENDAPATAN â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-        $salesRow = DB::table('transactions')
+        // ── PENDAPATAN ────────────────────────────────────────────────────
+        $salesRow = DB::table('laundry_orders')
             ->where('outlet_id', $outlet->id)
-            ->where('status', 'completed')
-            ->whereBetween('date', [$from, $to])
+            ->where('status', 'diambil')
+            ->whereNotNull('paid_at')
+            ->whereBetween(DB::raw('DATE(paid_at)'), [$from, $to])
             ->selectRaw('
-                COALESCE(SUM(total), 0)           as gross_sales,
-                COALESCE(SUM(discount_amount), 0) as total_discount,
-                COUNT(*)                           as total_trx
+                COALESCE(SUM(total), 0) as gross_sales,
+                COUNT(*)                as total_trx
             ')
             ->first();
 
         $grossSales    = (int) $salesRow->gross_sales;
-        $totalDiscount = (int) $salesRow->total_discount;
+        $totalDiscount = 0;
         $totalTrx      = (int) $salesRow->total_trx;
-        $netSales      = $grossSales; // total sudah net (setelah diskon)
+        $netSales      = $grossSales;
 
-        // â”€â”€ HPP (hanya jika track_cogs) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-        $totalHpp = 0;
-        if ($trackCogs) {
-            $totalHpp = (int) DB::table('transaction_items as ti')
-                ->join('transactions as t', 'ti.transaction_id', '=', 't.id')
-                ->leftJoin('products as p', 'ti.product_id', '=', 'p.id')
-                ->where('t.outlet_id', $outlet->id)
-                ->where('t.status', 'completed')
-                ->whereBetween('t.date', [$from, $to])
-                ->selectRaw('COALESCE(SUM(ti.qty * COALESCE(p.cost_price, 0)), 0) as hpp')
-                ->value('hpp');
-        }
+        // ── HPP — laundry tidak memakai HPP ──────────────────────────────
+        $totalHpp    = 0;
+        $grossProfit = $netSales;
 
-        $grossProfit = $netSales - $totalHpp;
-
-        // â”€â”€ PENGELUARAN â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── PENGELUARAN ───────────────────────────────────────────────────
         $expenseRows = DB::table('expenses')
             ->where('outlet_id', $outlet->id)
             ->whereBetween('date', [$from, $to])
@@ -83,7 +72,6 @@ class ProfitLossController extends Controller
 
         $totalExpenses = (int) $expenseRows->sum('total');
 
-        // Merge with labels
         $allCategories = Expense::$categories
             + $outlet->expenseCategories()->pluck('label', 'slug')->toArray();
 
@@ -101,16 +89,17 @@ class ProfitLossController extends Controller
 
         $netProfit = $grossProfit - $totalExpenses;
 
-        // â”€â”€ DATA HARIAN / BULANAN UNTUK CHART â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── DATA HARIAN / BULANAN UNTUK CHART ────────────────────────────
         $daysDiff = \Carbon\Carbon::parse($from)->diffInDays(\Carbon\Carbon::parse($to));
         $groupBy  = $daysDiff > 62 ? 'month' : 'day';
 
         if ($groupBy === 'day') {
-            $salesByPeriod = DB::table('transactions')
+            $salesByPeriod = DB::table('laundry_orders')
                 ->where('outlet_id', $outlet->id)
-                ->where('status', 'completed')
-                ->whereBetween('date', [$from, $to])
-                ->selectRaw("DATE_FORMAT(date,'%Y-%m-%d') as period, COALESCE(SUM(total),0) as total")
+                ->where('status', 'diambil')
+                ->whereNotNull('paid_at')
+                ->whereBetween(DB::raw('DATE(paid_at)'), [$from, $to])
+                ->selectRaw("DATE_FORMAT(paid_at,'%Y-%m-%d') as period, COALESCE(SUM(total),0) as total")
                 ->groupBy('period')
                 ->get()->keyBy('period');
 
@@ -121,11 +110,12 @@ class ProfitLossController extends Controller
                 ->groupBy('period')
                 ->get()->keyBy('period');
         } else {
-            $salesByPeriod = DB::table('transactions')
+            $salesByPeriod = DB::table('laundry_orders')
                 ->where('outlet_id', $outlet->id)
-                ->where('status', 'completed')
-                ->whereBetween('date', [$from, $to])
-                ->selectRaw("DATE_FORMAT(date,'%Y-%m') as period, COALESCE(SUM(total),0) as total")
+                ->where('status', 'diambil')
+                ->whereNotNull('paid_at')
+                ->whereBetween(DB::raw('DATE(paid_at)'), [$from, $to])
+                ->selectRaw("DATE_FORMAT(paid_at,'%Y-%m') as period, COALESCE(SUM(total),0) as total")
                 ->groupBy('period')
                 ->get()->keyBy('period');
 
@@ -137,7 +127,6 @@ class ProfitLossController extends Controller
                 ->get()->keyBy('period');
         }
 
-        // Build unified period list
         $allPeriods = $salesByPeriod->keys()->merge($expensesByPeriod->keys())->unique()->sort()->values();
 
         $chartData = $allPeriods->map(function ($period) use ($salesByPeriod, $expensesByPeriod, $groupBy) {

@@ -5,10 +5,9 @@ namespace App\Http\Controllers\Laundry;
 use App\Http\Controllers\Controller;
 
 use App\Exports\SalesReportExport;
+use App\Models\LaundryOrder;
 use App\Models\Outlet;
-use App\Models\Transaction;
 use App\Models\User;
-use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -36,10 +35,11 @@ class SalesReportController extends Controller
         $paymentMethod = $request->input('payment_method');
         $userId        = $request->input('user_id');
 
-        return $outlet->transactions()
+        return LaundryOrder::where('outlet_id', $outlet->id)
             ->with(['user', 'items'])
-            ->where('status', 'completed')
-            ->whereBetween('date', [$from, $to])
+            ->where('status', 'diambil')
+            ->whereNotNull('paid_at')
+            ->whereBetween(DB::raw('DATE(paid_at)'), [$from, $to])
             ->when($paymentMethod, fn($q) => $q->where('payment_method', $paymentMethod))
             ->when($userId,        fn($q) => $q->where('user_id', $userId));
     }
@@ -52,17 +52,17 @@ class SalesReportController extends Controller
         $userId        = $request->input('user_id');
 
         $transactions = $this->buildQuery($outlet, $request)
-            ->orderByDesc('date')
+            ->orderByDesc('paid_at')
             ->orderByDesc('id')
             ->get();
 
-        $totalRevenue    = (int) $transactions->sum('total');
-        $totalDiscount   = (int) $transactions->sum('discount_amount');
-        $totalCount      = $transactions->count();
-        $avgTransaction  = $totalCount > 0 ? round($totalRevenue / $totalCount) : 0;
+        $totalRevenue   = (int) $transactions->sum('total');
+        $totalDiscount  = 0;
+        $totalCount     = $transactions->count();
+        $avgTransaction = $totalCount > 0 ? round($totalRevenue / $totalCount) : 0;
 
         // By payment method
-        $byMethod = collect(['cash', 'qris', 'transfer', 'card'])
+        $byMethod = collect(['cash', 'qris_transfer', 'qris_pay', 'transfer', 'card'])
             ->mapWithKeys(fn($m) => [
                 $m => [
                     'count' => $transactions->where('payment_method', $m)->count(),
@@ -72,30 +72,32 @@ class SalesReportController extends Controller
 
         // By day (for chart)
         $byDay = $transactions
-            ->groupBy(fn($t) => $t->date->format('Y-m-d'))
+            ->groupBy(fn($t) => $t->paid_at->format('Y-m-d'))
             ->map(fn($g) => ['count' => $g->count(), 'total' => (int) $g->sum('total')])
             ->sortKeys();
 
-        // Top products
-        $byProduct = DB::table('transaction_items as ti')
-            ->join('transactions as t', 'ti.transaction_id', '=', 't.id')
-            ->where('t.outlet_id', $outlet->id)
-            ->where('t.status', 'completed')
-            ->whereBetween('t.date', [$from, $to])
-            ->when($paymentMethod, fn($q) => $q->where('t.payment_method', $paymentMethod))
-            ->when($userId,        fn($q) => $q->where('t.user_id', $userId))
+        // Top layanan
+        $byProduct = DB::table('laundry_order_items as li')
+            ->join('laundry_orders as lo', 'li.laundry_order_id', '=', 'lo.id')
+            ->where('lo.outlet_id', $outlet->id)
+            ->where('lo.status', 'diambil')
+            ->whereNotNull('lo.paid_at')
+            ->whereBetween(DB::raw('DATE(lo.paid_at)'), [$from, $to])
+            ->when($paymentMethod, fn($q) => $q->where('lo.payment_method', $paymentMethod))
+            ->when($userId,        fn($q) => $q->where('lo.user_id', $userId))
             ->select(
-                'ti.product_name',
-                DB::raw('SUM(ti.qty) as total_qty'),
-                DB::raw('SUM(ti.subtotal) as total_revenue'),
+                'li.product_name',
+                DB::raw('SUM(li.qty) as total_qty'),
+                DB::raw('SUM(li.subtotal) as total_revenue'),
             )
-            ->groupBy('ti.product_name')
+            ->groupBy('li.product_name')
             ->orderByDesc('total_revenue')
             ->get();
 
-        // Cashiers in this outlet
-        $cashiers = $outlet->transactions()
-            ->where('status', 'completed')
+        // Kasir yang pernah handle pesanan di outlet ini
+        $cashiers = LaundryOrder::where('outlet_id', $outlet->id)
+            ->where('status', 'diambil')
+            ->whereNotNull('paid_at')
             ->with('user')
             ->select('user_id')
             ->distinct()
@@ -144,7 +146,7 @@ class SalesReportController extends Controller
             'avg_transaction'    => $data['avgTransaction'],
         ];
 
-        $filename = 'laporan-penjualan-'
+        $filename = 'laporan-pendapatan-'
             . $outlet->name . '-'
             . $data['from'] . '-sd-' . $data['to']
             . '.xlsx';

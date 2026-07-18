@@ -640,6 +640,7 @@ renderSwatches();
 @if(session('info'))showToast('info',@json(session('info')));@endif
 </script>
 
+<x-system-report-fab />
 @stack('scripts')
 </body>
 </html>

@@ -32,6 +32,7 @@ class SelfOrderController extends Controller
     public function index(Outlet $outlet): View
     {
         $this->authorizeOutlet($outlet);
+        if (!$outlet->enable_self_order) abort(403, 'Fitur self-order tidak aktif untuk outlet ini.');
 
         $pending = Order::where('outlet_id', $outlet->id)
             ->whereNull('user_id')
@@ -65,6 +66,7 @@ class SelfOrderController extends Controller
     public function show(Outlet $outlet, Order $order): View|RedirectResponse
     {
         $user = $this->authorizeOutlet($outlet);
+        if (!$outlet->enable_self_order) abort(403, 'Fitur self-order tidak aktif untuk outlet ini.');
         $this->guardSelfOrder($outlet, $order);
 
         if ($order->status !== 'pending') {
@@ -88,6 +90,7 @@ class SelfOrderController extends Controller
     public function approve(Request $request, Outlet $outlet, Order $order): RedirectResponse
     {
         $user = $this->authorizeOutlet($outlet);
+        if (!$outlet->enable_self_order) abort(403, 'Fitur self-order tidak aktif untuk outlet ini.');
         $this->guardSelfOrder($outlet, $order);
 
         if ($order->status !== 'pending') {
@@ -162,6 +165,7 @@ class SelfOrderController extends Controller
     public function reject(Outlet $outlet, Order $order): RedirectResponse
     {
         $this->authorizeOutlet($outlet);
+        if (!$outlet->enable_self_order) abort(403, 'Fitur self-order tidak aktif untuk outlet ini.');
         $this->guardSelfOrder($outlet, $order);
 
         if ($order->status !== 'pending') {
@@ -177,6 +181,7 @@ class SelfOrderController extends Controller
     public function destroy(Outlet $outlet, Order $order): RedirectResponse
     {
         $user = $this->authorizeOutlet($outlet);
+        if (!$outlet->enable_self_order) abort(403, 'Fitur self-order tidak aktif untuk outlet ini.');
         $this->guardSelfOrder($outlet, $order);
 
         if ($user->role !== 'owner') abort(403);

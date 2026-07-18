@@ -1,4 +1,4 @@
-<x-outlet-layout :outlet="$outlet" pageTitle="Laporan Laba Rugi">
+<x-laundry-layout :outlet="$outlet" pageTitle="Laba &amp; Rugi">
 
 @php
   $profitColor  = $netProfit >= 0 ? '#34d399' : '#f87171';
@@ -106,7 +106,7 @@ document.addEventListener('DOMContentLoaded', rebuildPLChart);
 {{-- ── HEADER ── --}}
 <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px">
   <div>
-    <h2 class="font-display" style="font-size:20px;font-weight:700;color:var(--text)">Laporan Laba Rugi</h2>
+    <h2 class="font-display" style="font-size:20px;font-weight:700;color:var(--text)">Laba &amp; Rugi</h2>
     <p style="font-size:13px;color:var(--muted);margin-top:2px">
       {{ \Carbon\Carbon::parse($from)->translatedFormat('d M Y') }} –
       {{ \Carbon\Carbon::parse($to)->translatedFormat('d M Y') }}
@@ -377,4 +377,4 @@ document.addEventListener('DOMContentLoaded', rebuildPLChart);
 
 </div>
 
-</x-outlet-layout>
+</x-laundry-layout>

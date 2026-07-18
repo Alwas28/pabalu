@@ -49,6 +49,7 @@ class PosController extends Controller
 
         $requiresOpening = $outlet->outletType?->requires_opening_stock ?? false;
         $openingDone     = !$requiresOpening || $this->isBusinessDayOpen($outlet);
+        $trackCogs       = $outlet->outletType?->track_cogs ?? false;
 
         $products = $outlet->products()
             ->where('is_active', true)
@@ -71,7 +72,7 @@ class PosController extends Controller
 
         return view('laundry.pos.index', compact(
             'outlet', 'user', 'products', 'categories',
-            'requiresOpening', 'openingDone',
+            'requiresOpening', 'openingDone', 'trackCogs',
             'orderMode', 'storeUrl', 'csrfToken'
         ));
     }
@@ -117,7 +118,9 @@ class PosController extends Controller
         $receipt     = null;
         $transaction = null;
 
-        DB::transaction(function () use ($request, $outlet, $user, $businessDate, &$receipt, &$transaction) {
+        $trackCogs = $outlet->outletType?->track_cogs ?? false;
+
+        DB::transaction(function () use ($request, $outlet, $user, $businessDate, $trackCogs, &$receipt, &$transaction) {
             $subtotal  = 0;
             $validated = [];
 
@@ -131,7 +134,7 @@ class PosController extends Controller
                     throw new \Exception("Produk tidak ditemukan atau tidak aktif.");
                 }
 
-                if ($product->stock < $item['qty']) {
+                if ($trackCogs && $product->stock < $item['qty']) {
                     throw new \Exception("Stok {$product->name} tidak mencukupi. Tersisa: {$product->stock}.");
                 }
 
@@ -202,7 +205,7 @@ class PosController extends Controller
                     'qty'           => $v['qty'],
                     'subtotal'      => $v['subtotal'],
                 ]);
-                $v['product']->decrement('stock', $v['qty']);
+                if ($trackCogs) $v['product']->decrement('stock', $v['qty']);
 
                 $receiptItems[] = [
                     'name'     => $v['product']->name,

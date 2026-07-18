@@ -196,8 +196,10 @@ select.f-input option{background:var(--surface2);color:var(--text)}
   {{-- Nav --}}
   <div id="sb-nav" style="padding:4px 10px 10px">
   @php
-    $pendingCount = \App\Models\Order::where('outlet_id', $outlet->id)
-        ->whereNull('user_id')->where('status', 'pending')->count();
+    $pendingCount = $outlet->enable_self_order
+        ? \App\Models\Order::where('outlet_id', $outlet->id)
+              ->whereNull('user_id')->where('status', 'pending')->count()
+        : 0;
   @endphp
 
   @if($isKasir)
@@ -217,6 +219,7 @@ select.f-input option{background:var(--surface2);color:var(--text)}
       <i class="fa-solid fa-cash-register" style="width:15px;text-align:center;font-size:13px"></i>POS / Kasir
     </a>
     @endif
+    @if($outlet->enable_self_order)
     <a href="{{ $outlet->route('self-orders.index') }}"
        class="nav-item {{ $outlet->routeIs('self-orders.*') ? 'nav-active' : 'nav-inactive' }}">
       <i class="fa-solid fa-clipboard-list" style="width:15px;text-align:center;font-size:13px;color:#f59e0b"></i>Pesanan Masuk
@@ -224,6 +227,7 @@ select.f-input option{background:var(--surface2);color:var(--text)}
       <span style="margin-left:auto;background:#ef4444;color:#fff;border-radius:99px;font-size:10px;font-weight:700;padding:1px 6px;min-width:18px;text-align:center;display:inline-block">{{ $pendingCount }}</span>
       @endif
     </a>
+    @endif
     @if($p('transaction.view'))
     <a href="{{ $outlet->route('transactions.index') }}"
        class="nav-item {{ $outlet->routeIs('transactions.*') ? 'nav-active' : 'nav-inactive' }}">
@@ -305,6 +309,7 @@ select.f-input option{background:var(--surface2);color:var(--text)}
       <i class="fa-solid fa-cash-register" style="width:15px;text-align:center;font-size:13px"></i>POS / Kasir
     </a>
     @endif
+    @if($outlet->enable_self_order)
     <a href="{{ $outlet->route('self-orders.index') }}"
        class="nav-item {{ $outlet->routeIs('self-orders.*') ? 'nav-active' : 'nav-inactive' }}">
       <i class="fa-solid fa-clipboard-list" style="width:15px;text-align:center;font-size:13px;color:#f59e0b"></i>Pesanan Masuk
@@ -312,6 +317,7 @@ select.f-input option{background:var(--surface2);color:var(--text)}
       <span style="margin-left:auto;background:#ef4444;color:#fff;border-radius:99px;font-size:10px;font-weight:700;padding:1px 6px;min-width:18px;text-align:center;display:inline-block">{{ $pendingCount }}</span>
       @endif
     </a>
+    @endif
     @if($p('stock.in'))
     <a href="{{ $outlet->route('stock-in.index') }}"
        class="nav-item {{ $outlet->routeIs('stock-in.*') ? 'nav-active' : 'nav-inactive' }}">
@@ -549,6 +555,7 @@ renderSwatches();
 @if(session('info'))showToast('info',@json(session('info')));@endif
 </script>
 
+<x-system-report-fab />
 @stack('scripts')
 </body>
 </html>

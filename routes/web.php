@@ -4,6 +4,7 @@ use App\Http\Controllers\Fnb;
 use App\Http\Controllers\Laundry;
 use App\Http\Controllers\Retail;
 use App\Http\Controllers\Salon;
+use App\Http\Controllers\Sewa;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\OutletController;
 use App\Http\Controllers\OutletTypeController;
@@ -288,6 +289,16 @@ $laundryRoutes = function () {
     Route::post('{outlet}/self-orders/{order}/approve', [\App\Http\Controllers\SelfOrderController::class, 'approve'])->name('self-orders.approve');
     Route::patch('{outlet}/self-orders/{order}/reject', [\App\Http\Controllers\SelfOrderController::class, 'reject'])->name('self-orders.reject');
     Route::delete('{outlet}/self-orders/{order}',       [\App\Http\Controllers\SelfOrderController::class, 'destroy'])->name('self-orders.destroy');
+
+    Route::get('{outlet}/customers/search', [Laundry\CustomerController::class, 'search'])->name('customers.search');
+
+    Route::get('{outlet}/laundry-orders',                         [Laundry\LaundryOrderController::class, 'index'])->name('laundry-orders.index');
+    Route::post('{outlet}/laundry-orders',                        [Laundry\LaundryOrderController::class, 'store'])->name('laundry-orders.store');
+    Route::get('{outlet}/laundry-orders/{laundryOrder}',          [Laundry\LaundryOrderController::class, 'show'])->name('laundry-orders.show');
+    Route::patch('{outlet}/laundry-orders/{laundryOrder}/status', [Laundry\LaundryOrderController::class, 'updateStatus'])->name('laundry-orders.update-status');
+    Route::post('{outlet}/laundry-orders/{laundryOrder}/pay',     [Laundry\LaundryOrderController::class, 'pay'])->name('laundry-orders.pay');
+    Route::get('{outlet}/laundry-orders/{laundryOrder}/receipt',  [Laundry\LaundryOrderController::class, 'receipt'])->name('laundry-orders.receipt');
+    Route::delete('{outlet}/laundry-orders/{laundryOrder}',       [Laundry\LaundryOrderController::class, 'destroy'])->name('laundry-orders.destroy');
 };
 
 // ── Retail — toko kelontong, pakaian, elektronik (prefix: retail/)
@@ -358,6 +369,10 @@ $retailRoutes = function () {
     Route::patch('{outlet}/self-orders/{order}/reject', [\App\Http\Controllers\SelfOrderController::class, 'reject'])->name('self-orders.reject');
     Route::delete('{outlet}/self-orders/{order}',       [\App\Http\Controllers\SelfOrderController::class, 'destroy'])->name('self-orders.destroy');
 };
+
+// Halaman publik (tanpa login) — cek status pesanan laundry via QR
+Route::get('/cek-pesanan/{orderNumber}', [\App\Http\Controllers\Laundry\TrackOrderController::class, 'show'])
+    ->name('laundry.track');
 
 // Rute utama
 Route::middleware(['auth', 'verified', 'require.setup'])->group(function () use ($fnbRoutes, $salonRoutes, $laundryRoutes, $retailRoutes) {
@@ -458,9 +473,11 @@ Route::middleware(['auth', 'verified', 'require.setup'])->group(function () use 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    Route::get('/profile/password', [ProfileController::class, 'editPassword'])->name('profile.password');
 
     // Kelola User
     Route::resource('users', UserController::class);
+    Route::patch('users/{user}/password', [UserController::class, 'updatePassword'])->name('users.password');
     Route::post('users/{user}/verify', [UserController::class, 'verify'])->name('users.verify');
     Route::post('users/{user}/toggle-active', [UserController::class, 'toggleActive'])->name('users.toggle-active');
 
@@ -539,6 +556,33 @@ Route::middleware(['auth', 'verified', 'require.setup'])->group(function () use 
     Route::prefix('retail')->name('retail.')->group(function () use ($retailRoutes) {
         Route::get('{outlet}', [Retail\DashboardController::class, 'show'])->name('show');
         $retailRoutes();
+    });
+
+    // ── Sewa: jasa sewa (prefix: sewa/) — dashboard saja, fitur lain belum dibuat
+    Route::prefix('sewa')->name('sewa.')->group(function () {
+        Route::get('{outlet}', [Sewa\DashboardController::class, 'show'])->name('show');
+    });
+
+    // Daftar & profil owner (admin only)
+    Route::get('/owners', [\App\Http\Controllers\OwnerProfileController::class, 'index'])->name('owners.index');
+    Route::get('/owners/{user}', [\App\Http\Controllers\OwnerProfileController::class, 'show'])->name('owners.show');
+
+    // Chat (owner ↔ admin)
+    Route::prefix('chat')->name('chat.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\ChatController::class, 'index'])->name('index');
+        Route::get('conversations', [\App\Http\Controllers\ChatController::class, 'conversations'])->name('conversations');
+        Route::get('messages/{ownerId}', [\App\Http\Controllers\ChatController::class, 'messages'])->name('messages');
+        Route::post('send', [\App\Http\Controllers\ChatController::class, 'send'])->name('send');
+        Route::get('unread-count', [\App\Http\Controllers\ChatController::class, 'unreadCount'])->name('unread-count');
+    });
+
+    // Laporan Sistem (owner kirim, admin kelola)
+    Route::post('system-reports', [\App\Http\Controllers\SystemReportController::class, 'store'])->name('system-reports.store');
+    Route::get('system-reports/mine', [\App\Http\Controllers\SystemReportController::class, 'mine'])->name('system-reports.mine');
+    Route::prefix('system-reports')->name('system-reports.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\SystemReportController::class, 'index'])->name('index');
+        Route::patch('{report}/read', [\App\Http\Controllers\SystemReportController::class, 'markRead'])->name('read');
+        Route::post('{report}/reply', [\App\Http\Controllers\SystemReportController::class, 'reply'])->name('reply');
     });
 });
 
