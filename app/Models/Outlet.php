@@ -160,7 +160,7 @@ class Outlet extends Model
     public function isAccessibleBy(User $user): bool
     {
         if ($user->role === 'admin') return true;
-        if ($this->owner_id === $user->id) return true;
+        if ((int) $this->owner_id === (int) $user->id) return true;
         return $this->employees()->where('user_id', $user->id)->exists();
     }
 }

@@ -15,7 +15,7 @@ class SettingController extends Controller
     private function authorizeOwner(Outlet $outlet): void
     {
         $user = Auth::user();
-        if ($user->role !== 'admin' && $outlet->owner_id !== $user->id) {
+        if ($user->role !== 'admin' && (int) $outlet->owner_id !== (int) $user->id) {
             abort(403, 'Hanya pemilik atau admin yang dapat mengubah pengaturan outlet.');
         }
     }

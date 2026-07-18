@@ -101,7 +101,7 @@ class OutletController extends Controller
         $user = Auth::user();
 
         if (!$user->hasPermission('outlet.edit') ||
-            ($user->role !== 'admin' && $outlet->owner_id !== $user->id)) {
+            ($user->role !== 'admin' && (int) $outlet->owner_id !== (int) $user->id)) {
             abort(403);
         }
 
@@ -128,7 +128,7 @@ class OutletController extends Controller
         $user = Auth::user();
 
         if (!$user->hasPermission('outlet.delete') ||
-            ($user->role !== 'admin' && $outlet->owner_id !== $user->id)) {
+            ($user->role !== 'admin' && (int) $outlet->owner_id !== (int) $user->id)) {
             abort(403);
         }
 
@@ -143,7 +143,7 @@ class OutletController extends Controller
         $user = Auth::user();
 
         if (!$user->hasPermission('outlet.edit') ||
-            ($user->role !== 'admin' && $outlet->owner_id !== $user->id)) {
+            ($user->role !== 'admin' && (int) $outlet->owner_id !== (int) $user->id)) {
             abort(403);
         }
 
