@@ -20,35 +20,6 @@ use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
-// TEMPORARY DIAGNOSTIC — HAPUS SETELAH SELESAI
-Route::get('/_diag', function () {
-    $users = \App\Models\User::whereHas('roleRelation', fn($q) => $q->where('slug','owner'))
-        ->get(['id','name','email','is_active']);
-    $outlets = \App\Models\Outlet::with('outletType')->get(['id','name','owner_id','outlet_type_id','is_active']);
-    $authUser = \Illuminate\Support\Facades\Auth::user();
-
-    $rows = [];
-    foreach ($users as $u) {
-        $rows[] = "USER  id={$u->id} | {$u->name} | {$u->email} | active=".($u->is_active?'yes':'no');
-    }
-    $rows[] = '---';
-    foreach ($outlets as $o) {
-        $rows[] = "OUTLET id={$o->id} | {$o->name} | owner_id={$o->owner_id} | rp=".$o->rp().' | active='.($o->is_active?'yes':'no');
-    }
-    $rows[] = '---';
-    if ($authUser) {
-        $rows[] = "LOGGED_IN id={$authUser->id} | {$authUser->name} | role={$authUser->role}";
-        $myOutlets = \App\Models\Outlet::where('owner_id', $authUser->id)->get(['id','name']);
-        foreach ($myOutlets as $o) {
-            $rows[] = "  MY_OUTLET id={$o->id} | {$o->name}";
-        }
-    } else {
-        $rows[] = 'LOGGED_IN: (tidak login)';
-    }
-    return response('<pre style="font-family:monospace;padding:20px;font-size:14px">'.implode("\n",$rows).'</pre>');
-});
-// END TEMPORARY DIAGNOSTIC
-
 Route::get('/', function () {
     $partners = \App\Models\Partner::where('is_active', true)
         ->orderBy('sort_order')
