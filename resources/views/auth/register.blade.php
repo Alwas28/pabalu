@@ -82,6 +82,7 @@ header.scrolled{border-bottom:1px solid var(--line);box-shadow:0 6px 24px -18px 
   font-size:13.5px;font-family:inherit;outline:none;transition:border-color .15s,box-shadow .15s;
 }
 .f-input:focus{border-color:var(--ac);box-shadow:0 0 0 3px rgba(232,25,44,.1)}
+.f-input.f-input-error{border-color:#dc2626;background:#fff8f8}
 .f-hint{font-size:11.5px;color:#9aa0ab;margin-top:5px}
 .f-error{font-size:12px;color:#dc2626;margin-top:6px}
 .f-icon-wrap{position:relative}
@@ -97,12 +98,50 @@ header.scrolled{border-bottom:1px solid var(--line);box-shadow:0 6px 24px -18px 
 .auth-submit{
   width:100%;padding:12px;border-radius:99px;border:none;color:#fff;font-size:14px;font-weight:700;
   cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px;
-  box-shadow:0 8px 20px rgba(232,25,44,.28);margin-top:2px;
+  box-shadow:0 8px 20px rgba(232,25,44,.28);margin-top:2px;transition:.2s;
 }
+.auth-submit:disabled{opacity:.5;cursor:not-allowed;box-shadow:none}
 .auth-foot{padding:18px 32px 28px;text-align:center;border-top:1px solid #f5f3f3;margin-top:6px;font-size:13px;color:#6b7280}
 .auth-foot a{color:var(--ac);font-weight:700}
 .trust-row{margin-top:18px;text-align:center;display:flex;align-items:center;justify-content:center;gap:18px;flex-wrap:wrap}
 .trust-row span{font-size:12px;color:#9aa0ab}
+
+/* ════ ERROR MODAL ════ */
+.modal-backdrop{
+  position:fixed;inset:0;background:rgba(20,16,15,.55);backdrop-filter:blur(4px);
+  z-index:500;display:flex;align-items:center;justify-content:center;padding:20px;
+  opacity:0;visibility:hidden;transition:opacity .25s,visibility .25s;
+}
+.modal-backdrop.show{opacity:1;visibility:visible}
+.modal-box{
+  background:#fff;border-radius:22px;box-shadow:0 32px 80px rgba(0,0,0,.18);
+  max-width:380px;width:100%;padding:32px;text-align:center;
+  transform:scale(.92) translateY(16px);transition:transform .28s ease;
+}
+.modal-backdrop.show .modal-box{transform:scale(1) translateY(0)}
+.modal-icon{
+  width:68px;height:68px;border-radius:18px;margin:0 auto 18px;
+  background:linear-gradient(135deg,#ff4757,#c41020);
+  display:grid;place-items:center;
+  box-shadow:0 10px 28px -8px rgba(220,38,38,.45);
+}
+.modal-icon i{font-size:28px;color:#fff}
+.modal-box h2{font-size:18px;font-weight:700;color:#15181d;margin-bottom:8px}
+.modal-box p{font-size:13.5px;color:#6b7280;line-height:1.65;margin-bottom:22px}
+.modal-email-badge{
+  display:inline-flex;align-items:center;gap:7px;
+  background:#fff0f0;border:1px solid #fecaca;color:#dc2626;
+  border-radius:99px;padding:6px 14px;font-size:13px;font-weight:600;
+  margin-bottom:22px;word-break:break-all;
+}
+.modal-btn{
+  width:100%;padding:12px;border-radius:99px;border:none;
+  background:linear-gradient(135deg,var(--ac),var(--ac2));color:#fff;
+  font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  box-shadow:0 8px 20px rgba(232,25,44,.3);transition:.2s;
+}
+.modal-btn:hover{transform:translateY(-1px)}
 
 @keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
 .animate-fadeUp{animation:fadeUp .5s ease both}
@@ -185,7 +224,10 @@ header.scrolled{border-bottom:1px solid var(--line);box-shadow:0 6px 24px -18px 
           </div>
           <p class="f-hint"><i class="fa-solid fa-circle-info"></i> Link verifikasi dikirim ke email ini.</p>
           @error('email')
-            <p class="f-error"><i class="fa-solid fa-circle-exclamation"></i> {{ $message }}</p>
+            <p class="f-error" id="email-error-inline">
+              <i class="fa-solid fa-circle-exclamation"></i>
+              Email ini sudah terdaftar — silakan gunakan email lain.
+            </p>
           @enderror
         </div>
 
@@ -246,7 +288,8 @@ header.scrolled{border-bottom:1px solid var(--line);box-shadow:0 6px 24px -18px 
           @enderror
         </div>
 
-        <button type="submit" class="auth-submit a-grad">
+        <button type="submit" id="btn-submit" class="auth-submit a-grad"
+          @if($errors->has('email')) disabled @endif>
           <i class="fa-solid fa-user-plus"></i> Buat Akun Gratis
         </button>
       </form>
@@ -265,6 +308,24 @@ header.scrolled{border-bottom:1px solid var(--line);box-shadow:0 6px 24px -18px 
   </div>
 </section>
 
+{{-- Modal: email sudah terdaftar --}}
+@if($errors->has('email'))
+<div class="modal-backdrop" id="emailModal">
+  <div class="modal-box">
+    <div class="modal-icon"><i class="fa-solid fa-envelope-circle-check" style="text-decoration:line-through;font-size:26px"></i></div>
+    <h2>Email Sudah Terdaftar</h2>
+    <p>Alamat email berikut sudah digunakan oleh akun lain. Silakan gunakan email yang berbeda untuk mendaftar.</p>
+    <div class="modal-email-badge">
+      <i class="fa-solid fa-envelope"></i>
+      <span>{{ old('email') }}</span>
+    </div>
+    <button class="modal-btn" onclick="closeEmailModal()">
+      <i class="fa-solid fa-pen-to-square"></i> Ganti Email
+    </button>
+  </div>
+</div>
+@endif
+
 <script>
 function togglePass(fieldId, iconId) {
   const f=document.getElementById(fieldId), i=document.getElementById(iconId);
@@ -272,6 +333,45 @@ function togglePass(fieldId, iconId) {
   i.className=f.type==='password'?'fa-solid fa-eye':'fa-solid fa-eye-slash';
 }
 
+// ── Email modal & submit guard ──────────────────────────────────
+const takenEmail = '{{ old('email') }}';
+const hasEmailError = {{ $errors->has('email') ? 'true' : 'false' }};
+const emailInput  = document.getElementById('email');
+const submitBtn   = document.getElementById('btn-submit');
+
+function closeEmailModal() {
+  const m = document.getElementById('emailModal');
+  if (m) { m.classList.remove('show'); setTimeout(()=>m.remove(), 280); }
+  emailInput.focus();
+  emailInput.select();
+}
+
+function syncSubmitState() {
+  if (!hasEmailError) return;
+  const changed = emailInput.value.trim().toLowerCase() !== takenEmail.trim().toLowerCase();
+  submitBtn.disabled = !changed;
+  emailInput.classList.toggle('f-input-error', !changed);
+  const inlineErr = document.getElementById('email-error-inline');
+  if (inlineErr) inlineErr.style.display = changed ? 'none' : '';
+}
+
+if (hasEmailError) {
+  // Tunda sedikit agar animasi card selesai dulu
+  setTimeout(() => {
+    const m = document.getElementById('emailModal');
+    if (m) m.classList.add('show');
+  }, 400);
+
+  emailInput.addEventListener('input', syncSubmitState);
+  syncSubmitState();
+
+  // Klik backdrop menutup modal
+  document.getElementById('emailModal')?.addEventListener('click', function(e) {
+    if (e.target === this) closeEmailModal();
+  });
+}
+
+// ── Header & drawer ─────────────────────────────────────────────
 const hdr=document.getElementById('hdr');
 addEventListener('scroll',()=>hdr.classList.toggle('scrolled',scrollY>10));
 const burger=document.getElementById('burger'),mm=document.getElementById('mobileMenu'),
