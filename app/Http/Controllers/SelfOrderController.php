@@ -24,7 +24,7 @@ class SelfOrderController extends Controller
 
     private function guardSelfOrder(Outlet $outlet, Order $order): void
     {
-        if ($order->outlet_id !== $outlet->id) abort(404);
+        if ($order->outlet_id != $outlet->id) abort(404);
         if (!is_null($order->user_id)) abort(404);
     }
 

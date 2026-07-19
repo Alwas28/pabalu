@@ -28,7 +28,7 @@ class PriceController extends Controller
             abort(404);
         }
 
-        if ($product->outlet_id !== $outlet->id) {
+        if ($product->outlet_id != $outlet->id) {
             abort(404);
         }
 

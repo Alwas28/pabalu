@@ -180,7 +180,7 @@ class OrderController extends Controller
     {
         $user = $this->authorizeOutlet($outlet);
 
-        if ($order->outlet_id !== $outlet->id) abort(404);
+        if ($order->outlet_id != $outlet->id) abort(404);
 
         $outlet->load('outletType');
         $order->load(['items.product', 'user', 'transactions']);
@@ -203,7 +203,7 @@ class OrderController extends Controller
     {
         $this->authorizeOutlet($outlet);
 
-        if ($order->outlet_id !== $outlet->id) abort(404);
+        if ($order->outlet_id != $outlet->id) abort(404);
 
         $item = $order->items()->findOrFail($itemId);
         $item->update(['is_served' => !$item->is_served]);
@@ -226,7 +226,7 @@ class OrderController extends Controller
     {
         $this->authorizeOutlet($outlet);
 
-        if ($order->outlet_id !== $outlet->id) abort(404);
+        if ($order->outlet_id != $outlet->id) abort(404);
 
         $request->validate(['status' => ['required', 'in:open,preparing,served,cancelled']]);
 
@@ -358,7 +358,7 @@ class OrderController extends Controller
     {
         $user = $this->authorizeOutlet($outlet);
 
-        if ($order->outlet_id !== $outlet->id) abort(404);
+        if ($order->outlet_id != $outlet->id) abort(404);
 
         if ($this->shiftRequired($outlet, $user)) {
             return response()->json(['message' => 'Shift belum dibuka. Buka shift terlebih dahulu sebelum memproses pembayaran.'], 422);
@@ -423,7 +423,7 @@ class OrderController extends Controller
     {
         $user = $this->authorizeOutlet($outlet);
 
-        if ($order->outlet_id !== $outlet->id) abort(404);
+        if ($order->outlet_id != $outlet->id) abort(404);
 
         if (!$outlet->enable_qris_pay) {
             return response()->json(['message' => 'QRIS Pay tidak diaktifkan untuk outlet ini.'], 422);
@@ -472,7 +472,7 @@ class OrderController extends Controller
     {
         $user = $this->authorizeOutlet($outlet);
 
-        if ($order->outlet_id !== $outlet->id) abort(404);
+        if ($order->outlet_id != $outlet->id) abort(404);
 
         $data = $request->validate([
             'midtrans_order_id' => ['required', 'string'],
@@ -520,7 +520,7 @@ class OrderController extends Controller
     {
         $this->authorizeOutlet($outlet);
 
-        if ($order->outlet_id !== $outlet->id) abort(404);
+        if ($order->outlet_id != $outlet->id) abort(404);
 
         $outlet->load('outletType');
         $order->load(['items', 'user']);
@@ -533,7 +533,7 @@ class OrderController extends Controller
     {
         $this->authorizeOutlet($outlet);
 
-        if ($order->outlet_id !== $outlet->id) abort(404);
+        if ($order->outlet_id != $outlet->id) abort(404);
 
         $outlet->load('outletType');
         $order->load(['items', 'user']);

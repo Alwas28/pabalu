@@ -285,9 +285,10 @@
 @push('scripts')
 <script>
 const outletId = {{ $outlet->id }};
+const outletRp = '{{ $outlet->rp() }}';
 
 function openEdit(id, data) {
-  document.getElementById('form-edit').action = `/outlets/${outletId}/categories/${id}`;
+  document.getElementById('form-edit').action = `/${outletRp}/${outletId}/categories/${id}`;
   document.getElementById('edit-name').value  = data.name || '';
   document.getElementById('edit-desc').value  = data.description || '';
   document.getElementById('edit-sort').value  = data.sort_order ?? 0;
@@ -295,7 +296,7 @@ function openEdit(id, data) {
 }
 
 function openDelete(id, name) {
-  document.getElementById('form-delete').action = `/outlets/${outletId}/categories/${id}`;
+  document.getElementById('form-delete').action = `/${outletRp}/${outletId}/categories/${id}`;
   document.getElementById('delete-name').textContent = name;
   openModal('modal-delete');
 }

@@ -1,6 +1,6 @@
-﻿<x-outlet-layout :outlet="$outlet" pageTitle="Kategori">
+<x-outlet-layout :outlet="$outlet" pageTitle="Kategori">
 
-{{-- ── HEADER BAR ── --}}
+{{-- -- HEADER BAR -- --}}
 <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px" class="animate-fadeUp">
   <div>
     <h2 class="font-display" style="font-size:20px;font-weight:700;color:var(--text)">Kelola Kategori</h2>
@@ -17,7 +17,7 @@
   @endif
 </div>
 
-{{-- ── STATS ── --}}
+{{-- -- STATS -- --}}
 <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px" class="animate-fadeUp d1">
   <div class="stat-card">
     <div class="stat-icon" style="background:var(--ac-lt);color:var(--ac)">
@@ -48,7 +48,7 @@
   </div>
 </div>
 
-{{-- ── TABLE ── --}}
+{{-- -- TABLE -- --}}
 <div class="card animate-fadeUp d2">
   <div class="card-header">
     <span class="card-title">
@@ -56,7 +56,7 @@
       Daftar Kategori
     </span>
     <div style="position:relative">
-      <input id="search-input" oninput="filterRows()" placeholder="Cari kategori…"
+      <input id="search-input" oninput="filterRows()" placeholder="Cari kategori�"
         style="padding:7px 12px 7px 32px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:13px;font-family:inherit;outline:none;width:200px;transition:border-color .15s"
         onfocus="this.style.borderColor='var(--ac)'" onblur="this.style.borderColor='var(--border)'">
       <i class="fa-solid fa-magnifying-glass" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:12px;pointer-events:none"></i>
@@ -105,7 +105,7 @@
             </div>
           </td>
           <td style="max-width:260px">
-            <span style="font-size:12.5px;color:var(--muted)">{{ $cat->description ?: '—' }}</span>
+            <span style="font-size:12.5px;color:var(--muted)">{{ $cat->description ?: '�' }}</span>
           </td>
           <td style="text-align:center">
             <span style="font-size:13px;font-weight:600;color:var(--sub)">{{ $cat->sort_order }}</span>
@@ -162,7 +162,7 @@
   @endif
 </div>
 
-{{-- ══ MODAL TAMBAH ══ --}}
+{{-- -- MODAL TAMBAH -- --}}
 @if($user->hasPermission('category.create'))
 <div class="modal-backdrop" id="modal-add" onclick="if(event.target===this)closeModal('modal-add')">
   <div class="modal-box">
@@ -178,7 +178,7 @@
       <div style="padding:20px 24px;display:flex;flex-direction:column;gap:14px">
         <div>
           <label class="f-label">Nama Kategori <span style="color:var(--ac)">*</span></label>
-          <input name="name" class="f-input" required maxlength="100" placeholder="cth: Sembako, Minuman, Elektronik, Pakaian…" autofocus>
+          <input name="name" class="f-input" required maxlength="100" placeholder="cth: Sembako, Minuman, Elektronik, Pakaian�" autofocus>
         </div>
         <div>
           <label class="f-label">Deskripsi <span style="color:var(--muted);font-weight:400">(opsional)</span></label>
@@ -207,7 +207,7 @@
 
 @endif
 
-{{-- ══ MODAL EDIT ══ --}}
+{{-- -- MODAL EDIT -- --}}
 @if($user->hasPermission('category.edit'))
 <div class="modal-backdrop" id="modal-edit" onclick="if(event.target===this)closeModal('modal-edit')">
   <div class="modal-box">
@@ -251,7 +251,7 @@
 
 @endif
 
-{{-- ══ MODAL HAPUS ══ --}}
+{{-- -- MODAL HAPUS -- --}}
 @if($user->hasPermission('category.delete'))
 <div class="modal-backdrop" id="modal-delete" onclick="if(event.target===this)closeModal('modal-delete')">
   <div class="modal-box" style="max-width:380px">
@@ -285,9 +285,10 @@
 @push('scripts')
 <script>
 const outletId = {{ $outlet->id }};
+const outletRp = '{{ $outlet->rp() }}';
 
 function openEdit(id, data) {
-  document.getElementById('form-edit').action = `/outlets/${outletId}/categories/${id}`;
+  document.getElementById('form-edit').action = `/${outletRp}/${outletId}/categories/${id}`;
   document.getElementById('edit-name').value  = data.name || '';
   document.getElementById('edit-desc').value  = data.description || '';
   document.getElementById('edit-sort').value  = data.sort_order ?? 0;
@@ -295,7 +296,7 @@ function openEdit(id, data) {
 }
 
 function openDelete(id, name) {
-  document.getElementById('form-delete').action = `/outlets/${outletId}/categories/${id}`;
+  document.getElementById('form-delete').action = `/${outletRp}/${outletId}/categories/${id}`;
   document.getElementById('delete-name').textContent = name;
   openModal('modal-delete');
 }

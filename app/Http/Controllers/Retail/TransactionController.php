@@ -100,7 +100,7 @@ class TransactionController extends Controller
             abort(403);
         }
 
-        if ($transaction->outlet_id !== $outlet->id) {
+        if ($transaction->outlet_id != $outlet->id) {
             abort(404);
         }
 
@@ -125,7 +125,7 @@ class TransactionController extends Controller
             abort(403);
         }
 
-        if ($transaction->outlet_id !== $outlet->id) {
+        if ($transaction->outlet_id != $outlet->id) {
             abort(404);
         }
 
@@ -147,7 +147,7 @@ class TransactionController extends Controller
             abort(403);
         }
 
-        if ($transaction->outlet_id !== $outlet->id) {
+        if ($transaction->outlet_id != $outlet->id) {
             abort(404);
         }
 

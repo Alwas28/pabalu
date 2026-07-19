@@ -176,7 +176,7 @@ class LaundryOrderController extends Controller
     {
         $user = $this->authorizeOutlet($outlet);
 
-        if ($laundryOrder->outlet_id !== $outlet->id) abort(404);
+        if ($laundryOrder->outlet_id != $outlet->id) abort(404);
 
         $laundryOrder->load(['items', 'user']);
 
@@ -195,7 +195,7 @@ class LaundryOrderController extends Controller
     {
         $this->authorizeOutlet($outlet);
 
-        if ($laundryOrder->outlet_id !== $outlet->id) abort(404);
+        if ($laundryOrder->outlet_id != $outlet->id) abort(404);
 
         $next = $laundryOrder->nextStatus();
         if (!$next) {
@@ -215,7 +215,7 @@ class LaundryOrderController extends Controller
     {
         $this->authorizeOutlet($outlet);
 
-        if ($laundryOrder->outlet_id !== $outlet->id) abort(404);
+        if ($laundryOrder->outlet_id != $outlet->id) abort(404);
 
         if ($laundryOrder->status !== 'selesai') {
             return response()->json(['message' => 'Pesanan harus berstatus Selesai sebelum dibayar.'], 422);
@@ -248,7 +248,7 @@ class LaundryOrderController extends Controller
     {
         $user = $this->authorizeOutlet($outlet);
 
-        if ($laundryOrder->outlet_id !== $outlet->id) abort(404);
+        if ($laundryOrder->outlet_id != $outlet->id) abort(404);
 
         $laundryOrder->load(['items', 'user']);
 
@@ -261,7 +261,7 @@ class LaundryOrderController extends Controller
     {
         $user = $this->authorizeOutlet($outlet);
 
-        if ($laundryOrder->outlet_id !== $outlet->id) abort(404);
+        if ($laundryOrder->outlet_id != $outlet->id) abort(404);
 
         if ($laundryOrder->status === 'diambil') {
             return back()->with('error', 'Pesanan yang sudah diambil tidak dapat dihapus.');

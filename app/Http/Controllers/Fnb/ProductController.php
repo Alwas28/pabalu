@@ -97,7 +97,7 @@ class ProductController extends Controller
             abort(403);
         }
 
-        if ($product->outlet_id !== $outlet->id) {
+        if ($product->outlet_id != $outlet->id) {
             abort(404);
         }
 
@@ -135,7 +135,7 @@ class ProductController extends Controller
             abort(403);
         }
 
-        if ($product->outlet_id !== $outlet->id) {
+        if ($product->outlet_id != $outlet->id) {
             abort(404);
         }
 
@@ -156,7 +156,7 @@ class ProductController extends Controller
             abort(403);
         }
 
-        if ($product->outlet_id !== $outlet->id) {
+        if ($product->outlet_id != $outlet->id) {
             abort(404);
         }
 

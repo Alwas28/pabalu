@@ -149,7 +149,7 @@ class StockInController extends Controller
     {
         $user = $this->authorizeOutlet($outlet);
 
-        if ($stockIn->outlet_id !== $outlet->id) {
+        if ($stockIn->outlet_id != $outlet->id) {
             abort(404);
         }
 
@@ -166,7 +166,7 @@ class StockInController extends Controller
             abort(403);
         }
 
-        if ($stockIn->outlet_id !== $outlet->id) {
+        if ($stockIn->outlet_id != $outlet->id) {
             abort(404);
         }
 
@@ -195,7 +195,7 @@ class StockInController extends Controller
             abort(403);
         }
 
-        if ($stockIn->outlet_id !== $outlet->id) {
+        if ($stockIn->outlet_id != $outlet->id) {
             abort(404);
         }
 
@@ -263,7 +263,7 @@ class StockInController extends Controller
             abort(403);
         }
 
-        if ($stockIn->outlet_id !== $outlet->id) {
+        if ($stockIn->outlet_id != $outlet->id) {
             abort(404);
         }
 

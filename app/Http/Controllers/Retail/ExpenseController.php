@@ -115,7 +115,7 @@ class ExpenseController extends Controller
             abort(403);
         }
 
-        if ($expense->outlet_id !== $outlet->id) {
+        if ($expense->outlet_id != $outlet->id) {
             abort(404);
         }
 
@@ -143,7 +143,7 @@ class ExpenseController extends Controller
             abort(403);
         }
 
-        if ($expense->outlet_id !== $outlet->id) {
+        if ($expense->outlet_id != $outlet->id) {
             abort(404);
         }
 

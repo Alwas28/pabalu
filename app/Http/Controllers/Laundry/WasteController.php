@@ -134,7 +134,7 @@ class WasteController extends Controller
     {
         $user = $this->authorizeOutlet($outlet);
 
-        if ($waste->outlet_id !== $outlet->id) {
+        if ($waste->outlet_id != $outlet->id) {
             abort(404);
         }
 
@@ -152,7 +152,7 @@ class WasteController extends Controller
             abort(403);
         }
 
-        if ($waste->outlet_id !== $outlet->id) {
+        if ($waste->outlet_id != $outlet->id) {
             abort(404);
         }
 

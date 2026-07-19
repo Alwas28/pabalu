@@ -66,7 +66,7 @@ class CategoryController extends Controller
             abort(403);
         }
 
-        if ($category->outlet_id !== $outlet->id) {
+        if ($category->outlet_id != $outlet->id) {
             abort(404);
         }
 
@@ -91,7 +91,7 @@ class CategoryController extends Controller
             abort(403);
         }
 
-        if ($category->outlet_id !== $outlet->id) {
+        if ($category->outlet_id != $outlet->id) {
             abort(404);
         }
 
@@ -108,7 +108,7 @@ class CategoryController extends Controller
             abort(403);
         }
 
-        if ($category->outlet_id !== $outlet->id) {
+        if ($category->outlet_id != $outlet->id) {
             abort(404);
         }
 

@@ -124,7 +124,7 @@ class ShiftController extends Controller
     {
         $user = $this->authorizeAccess($outlet);
 
-        if ($shift->outlet_id !== $outlet->id || !$shift->isActive()) {
+        if ($shift->outlet_id != $outlet->id || !$shift->isActive()) {
             abort(404);
         }
 
@@ -183,7 +183,7 @@ class ShiftController extends Controller
             abort(403);
         }
 
-        if ($shift->outlet_id !== $outlet->id) {
+        if ($shift->outlet_id != $outlet->id) {
             abort(404);
         }
 
@@ -213,7 +213,7 @@ class ShiftController extends Controller
             abort(403);
         }
 
-        if ($shift->outlet_id !== $outlet->id) {
+        if ($shift->outlet_id != $outlet->id) {
             abort(404);
         }
 

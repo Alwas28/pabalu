@@ -87,7 +87,7 @@ class OpeningStockController extends Controller
             abort(404);
         }
 
-        if ($stockOpname->outlet_id !== $outlet->id || $stockOpname->type !== 'opening') {
+        if ($stockOpname->outlet_id != $outlet->id || $stockOpname->type !== 'opening') {
             abort(404);
         }
 
@@ -177,7 +177,7 @@ class OpeningStockController extends Controller
             abort(403);
         }
 
-        if ($stockOpname->outlet_id !== $outlet->id) {
+        if ($stockOpname->outlet_id != $outlet->id) {
             abort(404);
         }
 
