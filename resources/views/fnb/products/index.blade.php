@@ -489,6 +489,7 @@
 @push('scripts')
 <script>
 const outletId = {{ $outlet->id }};
+const outletRp = '{{ $outlet->rp() }}';
 
 /* ── Rupiah format helpers ── */
 function toFormatted(raw) {
@@ -562,7 +563,7 @@ function removeImg() {
 
 /* ── Open edit ── */
 function openEdit(id, d) {
-  document.getElementById('form-edit').action = `/outlets/${outletId}/products/${id}`;
+  document.getElementById('form-edit').action = `/${outletRp}/${outletId}/products/${id}`;
   document.getElementById('e-name').value = d.name  || '';
   document.getElementById('e-unit').value = d.unit  || 'pcs';
   document.getElementById('e-sku').value  = d.sku   || '';
@@ -591,7 +592,7 @@ function openEdit(id, d) {
 
 /* ── Open delete ── */
 function openDelete(id, name) {
-  document.getElementById('form-delete').action = `/outlets/${outletId}/products/${id}`;
+  document.getElementById('form-delete').action = `/${outletRp}/${outletId}/products/${id}`;
   document.getElementById('delete-name').textContent = name;
   openModal('modal-delete');
 }
