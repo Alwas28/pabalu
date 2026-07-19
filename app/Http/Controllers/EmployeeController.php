@@ -70,7 +70,7 @@ class EmployeeController extends Controller
         $owner = Auth::user();
         $employee = Employee::findOrFail($id);
 
-        if ($owner->role !== 'admin' && $employee->owner_id !== $owner->id) {
+        if ($owner->role !== 'admin' && (int) $employee->owner_id !== (int) $owner->id) {
             abort(403);
         }
 
