@@ -43,7 +43,7 @@ class UserController extends Controller
 
         $users = User::when(Auth::user()->role !== 'admin', function ($q) {
                 // Owner hanya lihat user non-admin dan non-owner
-                $q->whereNotIn('role', ['admin', 'owner']);
+                $q->whereHas('roleRelation', fn($r) => $r->whereNotIn('slug', ['admin', 'owner']));
             })
             ->orderByDesc('created_at')
             ->paginate(20);
