@@ -292,10 +292,10 @@
      MODAL PEMBAYARAN
 ════════════════════════════════════════════ --}}
 <div id="modal-payment" class="modal-backdrop" onclick="if(event.target===this)closePayment()">
-  <div class="modal-box" style="max-width:440px">
+  <div class="modal-box" style="max-width:440px;max-height:90vh;display:flex;flex-direction:column;">
 
     {{-- Header --}}
-    <div style="padding:18px 22px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+    <div style="padding:18px 22px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
       <h3 class="font-display" style="font-size:16px;font-weight:700;color:var(--text)">
         <i class="fa-solid fa-cash-register" style="color:var(--ac);margin-right:8px;font-size:13px"></i>Pembayaran
       </h3>
@@ -305,7 +305,7 @@
       </button>
     </div>
 
-    <div style="padding:18px 22px;display:flex;flex-direction:column;gap:16px">
+    <div style="padding:18px 22px;display:flex;flex-direction:column;gap:16px;overflow-y:auto;flex:1;min-height:0">
 
       {{-- Item list --}}
       <div id="pm-items" style="border:1px solid var(--border);border-radius:10px;overflow:hidden;max-height:140px;overflow-y:auto;scrollbar-width:thin"></div>
@@ -402,7 +402,7 @@
     </div>
 
     {{-- Footer --}}
-    <div style="padding:14px 22px;border-top:1px solid var(--border);display:flex;gap:10px">
+    <div style="padding:14px 22px;border-top:1px solid var(--border);display:flex;gap:10px;flex-shrink:0">
       <button onclick="closePayment()"
         style="flex:0 0 auto;padding:11px 18px;border-radius:12px;border:1px solid var(--border);background:transparent;color:var(--sub);font-size:13.5px;font-weight:600;cursor:pointer">
         Batal
