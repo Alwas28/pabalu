@@ -110,6 +110,8 @@ class PosController extends Controller
             'discount_type'    => ['nullable', 'in:percent,amount'],
             'discount_value'   => ['nullable', 'integer', 'min:0'],
             'notes'            => ['nullable', 'string', 'max:500'],
+            'reference_number' => ['nullable', 'string', 'max:100'],
+            'proof_image'      => ['nullable', 'image', 'max:3072'],
         ]);
 
         // Tanggal bisnis aktif (bisa kemarin jika outlet buka melewati tengah malam)
@@ -180,6 +182,10 @@ class PosController extends Controller
                 ->count();
             $txNumber = 'TRXPB' . $typeCode . $outletCode . $dateLabel . $timeLabel . str_pad($dailyCount + 1, 3, '0', STR_PAD_LEFT);
 
+            $proofPath = $request->hasFile('proof_image')
+                ? $request->file('proof_image')->store('payment-proofs', 'public')
+                : null;
+
             $transaction = Transaction::create([
                 'outlet_id'          => $outlet->id,
                 'user_id'            => $user->id,
@@ -194,6 +200,8 @@ class PosController extends Controller
                 'change_amount'      => $changeAmount,
                 'status'             => 'completed',
                 'notes'              => $request->notes,
+                'reference_number'   => $request->input('reference_number'),
+                'proof_image'        => $proofPath,
             ]);
 
             $receiptItems = [];
@@ -233,6 +241,7 @@ class PosController extends Controller
             ];
         });
 
+        \assert($transaction instanceof Transaction);
         $receiptUrl = $outlet->route('transactions.receipt', [$transaction->id]) . '?autoprint=1';
 
         return response()->json(['success' => true, 'receipt' => $receipt, 'receipt_url' => $receiptUrl]);

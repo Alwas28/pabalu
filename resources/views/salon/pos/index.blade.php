@@ -356,10 +356,43 @@
 
       {{-- Non-cash section --}}
       <div id="noncash-section" style="display:none">
-        <div style="text-align:center;padding:14px;border-radius:12px;background:var(--surface2);border:1px solid var(--border)">
-          <i class="fa-solid fa-circle-check" style="font-size:28px;color:#34d399;margin-bottom:8px;display:block"></i>
-          <p style="font-size:13.5px;color:var(--sub)">Konfirmasi pembayaran <span id="pm-method-label" style="font-weight:700;color:var(--text)"></span></p>
-          <p style="font-size:18px;font-weight:800;color:var(--text);margin-top:6px" id="pm-noncash-total">Rp 0</p>
+        <div style="display:flex;flex-direction:column;gap:12px">
+          {{-- Konfirmasi --}}
+          <div style="text-align:center;padding:14px;border-radius:12px;background:var(--surface2);border:1px solid var(--border)">
+            <i class="fa-solid fa-circle-check" style="font-size:28px;color:#34d399;margin-bottom:8px;display:block"></i>
+            <p style="font-size:13.5px;color:var(--sub)">Konfirmasi pembayaran <span id="pm-method-label" style="font-weight:700;color:var(--text)"></span></p>
+            <p style="font-size:18px;font-weight:800;color:var(--text);margin-top:6px" id="pm-noncash-total">Rp 0</p>
+          </div>
+          {{-- Nomor Referensi --}}
+          <div>
+            <div style="font-size:11.5px;font-weight:600;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">
+              No. Referensi <span style="font-weight:400;text-transform:none">(opsional)</span>
+            </div>
+            <input id="pm-reference" type="text" maxlength="100" placeholder="Contoh: TRF12345 / ID transaksi QRIS"
+              style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:8px 12px;font-size:13px;color:var(--text);outline:none;font-family:inherit;transition:border-color .15s"
+              onfocus="this.style.borderColor='var(--ac)'" onblur="this.style.borderColor='var(--border)'">
+          </div>
+          {{-- Bukti Foto --}}
+          <div>
+            <div style="font-size:11.5px;font-weight:600;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">
+              Bukti Foto <span style="font-weight:400;text-transform:none">(opsional)</span>
+            </div>
+            <label id="proof-label" for="pm-proof"
+              style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:10px;border:1.5px dashed var(--border);background:var(--surface2);cursor:pointer;transition:border-color .15s"
+              onmouseenter="this.style.borderColor='var(--ac)'" onmouseleave="this.style.borderColor='var(--border)'">
+              <i class="fa-solid fa-camera" style="font-size:15px;color:var(--muted)"></i>
+              <span id="proof-filename" style="font-size:13px;color:var(--muted)">Pilih foto bukti pembayaran</span>
+            </label>
+            <input type="file" id="pm-proof" accept="image/*" style="display:none" onchange="previewProof(this)">
+            <div id="proof-preview" style="display:none;margin-top:8px;position:relative">
+              <img id="proof-img" src="" alt="bukti"
+                style="max-width:100%;width:100%;border-radius:10px;max-height:140px;object-fit:cover">
+              <button onclick="clearProof()" type="button"
+                style="position:absolute;top:6px;right:6px;width:26px;height:26px;border-radius:7px;border:none;background:rgba(0,0,0,.6);color:#fff;cursor:pointer;font-size:11px;display:grid;place-items:center">
+                <i class="fa-solid fa-xmark"></i>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -840,6 +873,8 @@ function openPayment() {
     </div>`).join('');
 
   selectMethod('cash');
+  document.getElementById('pm-reference').value = '';
+  clearProof();
   document.getElementById('modal-payment').classList.add('open');
 }
 
@@ -925,6 +960,32 @@ function calcChange() {
   document.getElementById('change-display').style.color = paid >= total ? '#34d399' : '#f87171';
 }
 
+function previewProof(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    document.getElementById('proof-img').src = e.target.result;
+    document.getElementById('proof-preview').style.display = 'block';
+    document.getElementById('proof-filename').textContent = file.name;
+    document.getElementById('proof-label').style.display = 'none';
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearProof() {
+  const proofInput = document.getElementById('pm-proof');
+  if (proofInput) proofInput.value = '';
+  const preview = document.getElementById('proof-preview');
+  if (preview) preview.style.display = 'none';
+  const img = document.getElementById('proof-img');
+  if (img) img.src = '';
+  const fname = document.getElementById('proof-filename');
+  if (fname) fname.textContent = 'Pilih foto bukti pembayaran';
+  const label = document.getElementById('proof-label');
+  if (label) label.style.display = 'flex';
+}
+
 async function confirmPayment() {
   const total  = getTotal();
   const method = currentMethod;
@@ -941,14 +1002,22 @@ async function confirmPayment() {
     document.getElementById('cash-input').style.borderColor = 'var(--ac)';
   }
 
-  const payload = {
-    items: cart.map(i => ({ id: i.id, qty: i.qty })),
-    payment_method: method,
-    payment_amount: payAmt,
-    discount_type:  discMode,
-    discount_value: @if($canDiscount) parseInt(document.getElementById('discount-input')?.value)||0 @else 0 @endif,
-    notes: document.getElementById('pm-notes').value,
-  };
+  const fd = new FormData();
+  cart.forEach((item, idx) => {
+    fd.append(`items[${idx}][id]`, item.id);
+    fd.append(`items[${idx}][qty]`, item.qty);
+  });
+  fd.append('payment_method', method);
+  fd.append('payment_amount', payAmt);
+  fd.append('discount_type', discMode);
+  fd.append('discount_value', @if($canDiscount) parseInt(document.getElementById('discount-input')?.value)||0 @else 0 @endif);
+  fd.append('notes', document.getElementById('pm-notes').value);
+  if (method !== 'cash') {
+    const ref = (document.getElementById('pm-reference')?.value || '').trim();
+    const proofFile = document.getElementById('pm-proof')?.files[0];
+    if (ref) fd.append('reference_number', ref);
+    if (proofFile) fd.append('proof_image', proofFile);
+  }
 
   // Show loading
   const overlay = document.getElementById('loading-overlay');
@@ -959,11 +1028,10 @@ async function confirmPayment() {
     const resp = await fetch('{{ $storeUrl }}', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
         'Accept': 'application/json',
         'X-CSRF-TOKEN': '{{ $csrfToken }}',
       },
-      body: JSON.stringify(payload),
+      body: fd,
     });
 
     const data = await resp.json();
