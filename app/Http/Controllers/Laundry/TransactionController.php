@@ -104,7 +104,7 @@ class TransactionController extends Controller
             abort(404);
         }
 
-        if ($user->role === 'kasir' && $transaction->user_id !== $user->id) {
+        if ($user->role === 'kasir' && (int) $transaction->user_id !== (int) $user->id) {
             abort(403);
         }
 
@@ -129,7 +129,7 @@ class TransactionController extends Controller
             abort(404);
         }
 
-        if ($user->role === 'kasir' && $transaction->user_id !== $user->id) {
+        if ($user->role === 'kasir' && (int) $transaction->user_id !== (int) $user->id) {
             abort(403);
         }
 
