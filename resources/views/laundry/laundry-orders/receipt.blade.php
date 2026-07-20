@@ -97,6 +97,7 @@ h1{font-size:15px;font-weight:700;text-align:center;margin-bottom:2px}
 </div>
 
 @if($laundryOrder->paid_at)
+<div class="status-badge" style="border-width:2px">LUNAS</div>
 <hr class="divider">
 <div class="row">
   <span>Metode Bayar</span>
@@ -113,6 +114,8 @@ h1{font-size:15px;font-weight:700;text-align:center;margin-bottom:2px}
 </div>
 @endif
 <div class="info-line" style="margin-top:4px">Dibayar: {{ $laundryOrder->paid_at->format('d/m/Y H:i') }}</div>
+@else
+<div class="status-badge" style="border-width:2px">BELUM LUNAS</div>
 @endif
 
 <hr class="divider">
@@ -134,6 +137,14 @@ h1{font-size:15px;font-weight:700;text-align:center;margin-bottom:2px}
   <br>
   Terima kasih telah mempercayakan<br>
   cucian Anda kepada kami!
+</div>
+
+<div style="display:flex;justify-content:center;align-items:center;gap:14px;margin-top:10px">
+  <img src="/img/stempel.png" alt="Viteks" style="height:34px;object-fit:contain">
+  <img src="/img/logo-pabalu.png" alt="Pabalu" style="height:26px;object-fit:contain">
+</div>
+<div style="font-size:8px;text-align:center;color:#888;margin-top:3px;letter-spacing:.3px">
+  Viteks &middot; Didukung oleh Pabalu
 </div>
 
 {{-- Tombol Print (hanya di layar) --}}
