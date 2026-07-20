@@ -7,7 +7,7 @@
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Courier New',Courier,monospace;background:#fff;color:#000;font-size:12px;width:80mm;margin:0 auto;padding:4mm}
-@media print{body{width:80mm;margin:0;padding:4mm} .no-print{display:none!important} @page{margin:0;size:80mm auto}}
+@media print{body{width:80mm;margin:0;padding:4mm} .no-print{display:none!important} @page{margin:0;size:80mm auto} .brand-logo{filter:brightness(0)!important}}
 h1{font-size:15px;font-weight:700;text-align:center;margin-bottom:2px}
 .sub{font-size:10px;text-align:center;color:#444}
 .divider{border:none;border-top:1px dashed #888;margin:6px 0}
@@ -140,11 +140,11 @@ h1{font-size:15px;font-weight:700;text-align:center;margin-bottom:2px}
 </div>
 
 <div style="display:flex;justify-content:center;align-items:center;gap:14px;margin-top:10px">
-  <img src="/img/stempel.png" alt="Viteks" style="height:34px;object-fit:contain">
-  <img src="/img/logo-pabalu.png" alt="Pabalu" style="height:26px;object-fit:contain">
+  <img src="/img/stempel.png" alt="Viteks" class="brand-logo" style="height:34px;object-fit:contain">
+  <img src="/img/logo-pabalu.png" alt="Pabalu" class="brand-logo" style="height:26px;object-fit:contain">
 </div>
 <div style="font-size:8px;text-align:center;color:#888;margin-top:3px;letter-spacing:.3px">
-  Viteks &middot; Didukung oleh Pabalu
+  <a href="https://pabalu.id/" style="color:#888;text-decoration:none">pabalu.id</a> didukung oleh viteks.id
 </div>
 
 {{-- Tombol Print (hanya di layar) --}}

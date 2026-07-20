@@ -62,6 +62,7 @@
       margin: 0;
     }
     body { padding: 2mm 2mm 6mm; }
+    .brand-logo { filter: brightness(0) !important; }
   }
 
   /* ── Komponen struk ── */
@@ -108,6 +109,8 @@
   .footer { text-align: center; font-size: 11px; color: #333; line-height: 1.7; margin-top: 6px; }
   .footer .thank-you { font-size: 12.5px; font-weight: bold; }
   .trx-number { font-size: 9.5px; letter-spacing: .03em; color: #555; }
+  .brand-footer { display: flex; justify-content: center; align-items: center; gap: 10px; margin-top: 6px; }
+  .brand-logo { height: 26px; object-fit: contain; }
 
   /* QR placeholder (opsional) */
   .qr-box {
@@ -273,7 +276,14 @@
   <div>Sampai jumpa kembali di</div>
   <div class="bold">{{ $outlet->name }}</div>
   <div style="margin-top:5px;font-size:9.5px;color:#888">
-    {{ $typeCode }}{{ $outCode }} &bull; Powered by Pabalu
+    {{ $typeCode }}{{ $outCode }}
+  </div>
+  <div class="brand-footer">
+    <img src="/img/stempel.png" alt="Viteks" class="brand-logo">
+    <img src="/img/logo-pabalu.png" alt="Pabalu" class="brand-logo">
+  </div>
+  <div style="font-size:8px;color:#888;margin-top:3px">
+    <a href="https://pabalu.id/" style="color:#888;text-decoration:none">pabalu.id</a> didukung oleh viteks.id
   </div>
 </div>
 
