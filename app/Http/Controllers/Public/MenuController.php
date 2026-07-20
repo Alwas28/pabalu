@@ -150,6 +150,12 @@ class MenuController extends Controller
         }
 
         $order = DB::transaction(function () use ($data, $outlet, $products) {
+            // Kunci baris outlet (selalu ada) supaya request self-order yang masuk
+            // bersamaan tidak ikut menghitung nomor urut sebelum yang pertama commit —
+            // lockForUpdate() pada query orders tidak mengunci apa pun saat belum ada
+            // order sama sekali hari itu, sehingga urutan pertama bisa duplikat.
+            Outlet::whereKey($outlet->id)->lockForUpdate()->first();
+
             $orderNumber = $this->generateOrderNumber($outlet->id);
             $subtotal    = 0;
             $lines       = [];
