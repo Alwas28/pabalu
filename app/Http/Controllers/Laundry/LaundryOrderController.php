@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Customer;
 use App\Models\LaundryOrder;
 use App\Models\Outlet;
+use App\Models\Transaction;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -213,7 +214,7 @@ class LaundryOrderController extends Controller
 
     public function pay(Request $request, Outlet $outlet, LaundryOrder $laundryOrder): JsonResponse
     {
-        $this->authorizeOutlet($outlet);
+        $user = $this->authorizeOutlet($outlet);
 
         if ($laundryOrder->outlet_id != $outlet->id) abort(404);
 
@@ -229,19 +230,76 @@ class LaundryOrderController extends Controller
         $paymentAmount = (int) $request->payment_amount;
         $changeAmount  = max(0, $paymentAmount - $laundryOrder->total);
 
-        $laundryOrder->update([
-            'status'         => 'diambil',
-            'payment_method' => $request->payment_method,
-            'payment_amount' => $paymentAmount,
-            'change_amount'  => $changeAmount,
-            'paid_at'        => now(),
-        ]);
+        DB::transaction(function () use ($outlet, $laundryOrder, $user, $request, $paymentAmount, $changeAmount) {
+            $laundryOrder->update([
+                'status'         => 'diambil',
+                'payment_method' => $request->payment_method,
+                'payment_amount' => $paymentAmount,
+                'change_amount'  => $changeAmount,
+                'paid_at'        => now(),
+            ]);
+
+            $this->recordTransaction($outlet, $laundryOrder, $user);
+        });
 
         return response()->json([
             'success'       => true,
             'change_amount' => $changeAmount,
             'receipt_url'   => $outlet->route('laundry-orders.receipt', [$laundryOrder->id]),
         ]);
+    }
+
+    // Catat pesanan yang sudah dibayar ke `transactions` supaya muncul di menu
+    // Transaksi & dashboard (sumber kebenaran alur laundry tetap laundry_orders).
+    private function recordTransaction(Outlet $outlet, LaundryOrder $laundryOrder, User $user): Transaction
+    {
+        $laundryOrder->loadMissing('items');
+        $outlet->loadMissing('outletType');
+
+        $typeCode     = $outlet->outletType?->type_code ?? '08';
+        $outletCode   = $outlet->code ?? 'XXXX';
+        $businessDate = today()->format('Y-m-d');
+        $dateLabel    = now()->format('ymd');
+        $timeLabel    = now()->format('His');
+
+        $dailyCount = Transaction::where('outlet_id', $outlet->id)
+            ->where('date', $businessDate)
+            ->lockForUpdate()
+            ->count();
+
+        $txNumber = 'TRXPB' . $typeCode . $outletCode . $dateLabel . $timeLabel
+            . str_pad($dailyCount + 1, 3, '0', STR_PAD_LEFT);
+
+        $transaction = Transaction::create([
+            'outlet_id'          => $outlet->id,
+            'laundry_order_id'   => $laundryOrder->id,
+            'user_id'            => $laundryOrder->user_id ?? $user->id,
+            'transaction_number' => $txNumber,
+            'date'               => $businessDate,
+            'subtotal'           => $laundryOrder->subtotal,
+            'discount_percent'   => 0,
+            'discount_amount'    => $laundryOrder->discount_amount,
+            'total'              => $laundryOrder->total,
+            'payment_method'     => $laundryOrder->payment_method,
+            'payment_amount'     => $laundryOrder->payment_amount,
+            'change_amount'      => $laundryOrder->change_amount,
+            'status'             => 'completed',
+            'notes'              => $laundryOrder->notes,
+        ]);
+
+        foreach ($laundryOrder->items as $item) {
+            $transaction->items()->create([
+                'product_id'    => $item->product_id,
+                'product_name'  => $item->product_name . ($item->unit ? " ({$item->unit})" : ''),
+                'product_price' => $item->product_price,
+                // transaction_items.qty integer, item laundry bisa desimal (kg) — dibulatkan ke
+                // atas supaya item kecil (0.5kg) tidak hilang jadi qty 0. Nominal (subtotal) tetap akurat.
+                'qty'           => max(1, (int) ceil($item->qty)),
+                'subtotal'      => $item->subtotal,
+            ]);
+        }
+
+        return $transaction;
     }
 
     public function receipt(Outlet $outlet, LaundryOrder $laundryOrder): View

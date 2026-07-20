@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 #[Fillable([
-    'outlet_id', 'order_id', 'user_id', 'transaction_number', 'date',
+    'outlet_id', 'order_id', 'laundry_order_id', 'user_id', 'transaction_number', 'date',
     'subtotal', 'discount_percent', 'discount_amount', 'total',
     'payment_method', 'payment_amount', 'change_amount',
     'reference_number', 'proof_image', 'midtrans_order_id',
@@ -54,5 +54,10 @@ class Transaction extends Model
     public function orders(): BelongsToMany
     {
         return $this->belongsToMany(Order::class, 'order_transaction');
+    }
+
+    public function laundryOrder(): BelongsTo
+    {
+        return $this->belongsTo(LaundryOrder::class);
     }
 }
