@@ -156,7 +156,7 @@ class MenuController extends Controller
             // order sama sekali hari itu, sehingga urutan pertama bisa duplikat.
             Outlet::whereKey($outlet->id)->lockForUpdate()->first();
 
-            $orderNumber = $this->generateOrderNumber($outlet->id);
+            $orderNumber = $this->generateOrderNumber($outlet);
             $subtotal    = 0;
             $lines       = [];
 
@@ -216,10 +216,13 @@ class MenuController extends Controller
         return view('public.menu.track', compact('outlet', 'order'));
     }
 
-    private function generateOrderNumber(int $outletId): string
+    private function generateOrderNumber(Outlet $outlet): string
     {
-        $prefix = 'SELF-' . now()->format('ymd') . '-';
-        $last   = Order::where('outlet_id', $outletId)
+        // Kode outlet disertakan di nomor karena `order_number` unique secara GLOBAL
+        // (lintas semua outlet), bukan per-outlet — tanpa ini, outlet berbeda yang
+        // sama-sama membuat order pertama di hari yang sama akan tabrakan nomor.
+        $prefix = 'SELF-' . ($outlet->code ?: $outlet->id) . '-' . now()->format('ymd') . '-';
+        $last   = Order::where('outlet_id', $outlet->id)
             ->where('order_number', 'like', $prefix . '%')
             ->lockForUpdate()
             ->max('order_number');
