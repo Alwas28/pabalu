@@ -62,7 +62,6 @@
       margin: 0;
     }
     body { padding: 2mm 2mm 6mm; }
-    .brand-logo { filter: brightness(0) !important; }
   }
 
   /* ── Komponen struk ── */
@@ -251,8 +250,8 @@
     {{ $typeCode }}{{ $outCode }}
   </div>
   <div class="brand-footer">
-    <img src="/img/stempel.png" alt="Viteks" class="brand-logo">
-    <img src="/img/logo-pabalu.png" alt="Pabalu" class="brand-logo">
+    <img src="/img/Logo%20Viteks%20Hitam.png" alt="Viteks" class="brand-logo">
+    <img src="/img/Logo%20Pabalu%20-%20Hitam.png" alt="Pabalu" class="brand-logo">
   </div>
   <div style="font-size:8px;color:#888;margin-top:3px">
     <a href="https://pabalu.id/" style="color:#888;text-decoration:none">pabalu.id</a> didukung oleh viteks.id
