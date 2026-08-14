@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['owner_id', 'outlet_type_id', 'name', 'bidang_usaha', 'code', 'address', 'phone', 'is_active', 'order_mode', 'enable_opening_shift', 'enable_barcode_scanner', 'enable_self_order', 'province_id', 'regency_id', 'district_id', 'kelurahan', 'enable_qris_transfer', 'enable_qris_pay', 'enable_transfer', 'enable_card', 'midtrans_server_key', 'midtrans_client_key', 'midtrans_is_production'])]
+#[Fillable(['owner_id', 'outlet_type_id', 'name', 'bidang_usaha', 'code', 'address', 'phone', 'is_active', 'order_mode', 'enable_opening_shift', 'enable_barcode_scanner', 'enable_self_order', 'enable_booking', 'province_id', 'regency_id', 'district_id', 'kelurahan', 'latitude', 'longitude', 'enable_qris_transfer', 'enable_qris_pay', 'enable_transfer', 'enable_card', 'midtrans_server_key', 'midtrans_client_key', 'midtrans_is_production', 'rental_receipt_type'])]
 class Outlet extends Model
 {
     protected function casts(): array
@@ -18,12 +18,28 @@ class Outlet extends Model
             'enable_opening_shift'   => 'boolean',
             'enable_barcode_scanner' => 'boolean',
             'enable_self_order'      => 'boolean',
+            'enable_booking'         => 'boolean',
             'enable_qris_transfer'   => 'boolean',
             'enable_qris_pay'        => 'boolean',
             'enable_transfer'        => 'boolean',
             'enable_card'            => 'boolean',
             'midtrans_is_production' => 'boolean',
         ];
+    }
+
+    public function documentRequirements(): HasMany
+    {
+        return $this->hasMany(RentalDocumentRequirement::class);
+    }
+
+    public function rentalItems(): HasMany
+    {
+        return $this->hasMany(RentalItem::class)->orderBy('sort_order')->orderBy('name');
+    }
+
+    public function rentalTransactions(): HasMany
+    {
+        return $this->hasMany(RentalTransaction::class);
     }
 
     /** Metode pembayaran non-tunai yang aktif untuk outlet ini: [code => [label, icon]]. */
@@ -68,9 +84,10 @@ class Outlet extends Model
         return $this->belongsTo(OutletType::class);
     }
 
+    /** Kategori kini milik jenis outlet (dikelola admin), bukan outlet ini sendiri. */
     public function categories(): HasMany
     {
-        return $this->hasMany(Category::class)->orderBy('sort_order')->orderBy('name');
+        return $this->outletType->categories()->orderBy('sort_order')->orderBy('name');
     }
 
     public function products(): HasMany

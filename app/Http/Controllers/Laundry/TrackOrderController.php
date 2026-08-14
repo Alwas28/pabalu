@@ -8,9 +8,9 @@ use Illuminate\View\View;
 
 class TrackOrderController extends Controller
 {
-    public function show(string $orderNumber): View
+    public function show(string $token): View
     {
-        $order = LaundryOrder::where('order_number', $orderNumber)
+        $order = LaundryOrder::where('tracking_token', $token)
             ->with(['items', 'outlet'])
             ->firstOrFail();
 

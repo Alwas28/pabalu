@@ -26,28 +26,42 @@ class OutletTypeController extends Controller
         return view('outlet-types.index', compact('types'));
     }
 
+    public function show(OutletType $outletType): View
+    {
+        $this->authorizeAdmin();
+
+        $outletType->loadCount('outlets');
+        $categories = $outletType->categories()->withCount('products')->orderBy('sort_order')->orderBy('name')->get();
+
+        return view('outlet-types.show', compact('outletType', 'categories'));
+    }
+
     public function store(Request $request): RedirectResponse
     {
         $this->authorizeAdmin();
 
         $validated = $request->validate([
-            'name'        => ['required', 'string', 'max:100'],
-            'type_code'   => ['nullable', 'string', 'size:2', 'unique:outlet_types,type_code'],
-            'icon'        => ['nullable', 'string', 'max:60'],
-            'description' => ['nullable', 'string', 'max:255'],
-            'sort_order'  => ['nullable', 'integer', 'min:0'],
+            'name'                => ['required', 'string', 'max:100'],
+            'type_code'           => ['nullable', 'string', 'size:2', 'unique:outlet_types,type_code'],
+            'icon'                => ['nullable', 'string', 'max:60'],
+            'description'         => ['nullable', 'string', 'max:255'],
+            'sort_order'          => ['nullable', 'integer', 'min:0'],
+            'default_order_mode'  => ['nullable', 'in:quick,kitchen'],
         ]);
 
         OutletType::create([
-            'name'                   => $validated['name'],
-            'slug'                   => $this->makeSlug($validated['name']),
-            'type_code'              => $validated['type_code'] ? strtoupper($validated['type_code']) : null,
-            'icon'                   => $validated['icon'] ?: 'fa-store',
-            'description'            => $validated['description'] ?? null,
-            'requires_opening_stock' => $request->boolean('requires_opening_stock'),
-            'track_cogs'             => $request->boolean('track_cogs'),
-            'is_active'              => true,
-            'sort_order'             => $validated['sort_order'] ?? 0,
+            'name'                            => $validated['name'],
+            'slug'                            => $this->makeSlug($validated['name']),
+            'type_code'                       => $validated['type_code'] ? strtoupper($validated['type_code']) : null,
+            'icon'                            => $validated['icon'] ?: 'fa-store',
+            'description'                     => $validated['description'] ?? null,
+            'requires_opening_stock'          => $request->boolean('requires_opening_stock'),
+            'track_cogs'                      => $request->boolean('track_cogs'),
+            'is_active'                       => true,
+            'sort_order'                      => $validated['sort_order'] ?? 0,
+            'default_order_mode'              => $validated['default_order_mode'] ?? 'quick',
+            'default_enable_opening_shift'    => $request->boolean('default_enable_opening_shift'),
+            'default_enable_barcode_scanner'  => $request->boolean('default_enable_barcode_scanner'),
         ]);
 
         return back()->with('success', "Jenis outlet \"{$validated['name']}\" berhasil ditambahkan.");
@@ -58,21 +72,25 @@ class OutletTypeController extends Controller
         $this->authorizeAdmin();
 
         $validated = $request->validate([
-            'name'        => ['required', 'string', 'max:100'],
-            'type_code'   => ['nullable', 'string', 'size:2', "unique:outlet_types,type_code,{$outletType->id}"],
-            'icon'        => ['nullable', 'string', 'max:60'],
-            'description' => ['nullable', 'string', 'max:255'],
-            'sort_order'  => ['nullable', 'integer', 'min:0'],
+            'name'                => ['required', 'string', 'max:100'],
+            'type_code'           => ['nullable', 'string', 'size:2', "unique:outlet_types,type_code,{$outletType->id}"],
+            'icon'                => ['nullable', 'string', 'max:60'],
+            'description'         => ['nullable', 'string', 'max:255'],
+            'sort_order'          => ['nullable', 'integer', 'min:0'],
+            'default_order_mode'  => ['nullable', 'in:quick,kitchen'],
         ]);
 
         $outletType->update([
-            'name'                   => $validated['name'],
-            'type_code'              => $validated['type_code'] ? strtoupper($validated['type_code']) : null,
-            'icon'                   => $validated['icon'] ?: 'fa-store',
-            'description'            => $validated['description'] ?? null,
-            'requires_opening_stock' => $request->boolean('requires_opening_stock'),
-            'track_cogs'             => $request->boolean('track_cogs'),
-            'sort_order'             => $validated['sort_order'] ?? 0,
+            'name'                            => $validated['name'],
+            'type_code'                       => $validated['type_code'] ? strtoupper($validated['type_code']) : null,
+            'icon'                            => $validated['icon'] ?: 'fa-store',
+            'description'                     => $validated['description'] ?? null,
+            'requires_opening_stock'          => $request->boolean('requires_opening_stock'),
+            'track_cogs'                      => $request->boolean('track_cogs'),
+            'sort_order'                      => $validated['sort_order'] ?? 0,
+            'default_order_mode'              => $validated['default_order_mode'] ?? 'quick',
+            'default_enable_opening_shift'    => $request->boolean('default_enable_opening_shift'),
+            'default_enable_barcode_scanner'  => $request->boolean('default_enable_barcode_scanner'),
         ]);
 
         return back()->with('success', "Jenis outlet \"{$outletType->name}\" berhasil diperbarui.");

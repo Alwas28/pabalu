@@ -191,7 +191,7 @@
               @endif
               @if($user->hasPermission('product.edit'))
               <button title="Edit"
-                onclick='openEdit({{ $product->id }}, {!! json_encode([
+                onclick='openEdit({{ $product->id }}, {{ json_encode([
                   "name"        => $product->name,
                   "category_id" => $product->category_id,
                   "sku"         => $product->sku,
@@ -201,7 +201,7 @@
                   "min_stock"   => $product->min_stock,
                   "description" => $product->description,
                   "image"       => $product->image ? Storage::url($product->image) : null,
-                ]) !!})'
+                ]) }})'
                 style="width:30px;height:30px;border-radius:8px;border:1px solid var(--border);background:transparent;cursor:pointer;color:var(--sub);font-size:12px;transition:all .15s"
                 onmouseover="this.style.background='var(--surface2)';this.style.color='var(--text)'"
                 onmouseout="this.style.background='transparent';this.style.color='var(--sub)'">

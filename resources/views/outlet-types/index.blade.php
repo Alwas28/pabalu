@@ -127,6 +127,12 @@
           </td>
           <td>
             <div style="display:flex;align-items:center;justify-content:flex-end;gap:6px">
+              {{-- Detail --}}
+              <a href="{{ route('outlet-types.show', $type) }}"
+                style="width:32px;height:32px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);cursor:pointer;font-size:13px;color:var(--sub);transition:color .15s;display:grid;place-items:center;text-decoration:none"
+                onmouseover="this.style.color='var(--ac)'" onmouseout="this.style.color='var(--sub)'" title="Detail & Kategori">
+                <i class="fa-solid fa-eye"></i>
+              </a>
               {{-- Toggle Active --}}
               <form method="POST" action="{{ route('outlet-types.toggle-active', $type) }}" style="display:inline">
                 @csrf
@@ -145,6 +151,9 @@
                 data-sort="{{ $type->sort_order }}"
                 data-ros="{{ $type->requires_opening_stock ? '1' : '0' }}"
                 data-cogs="{{ $type->track_cogs ? '1' : '0' }}"
+                data-order-mode="{{ $type->default_order_mode }}"
+                data-def-opening="{{ $type->default_enable_opening_shift ? '1' : '0' }}"
+                data-def-barcode="{{ $type->default_enable_barcode_scanner ? '1' : '0' }}"
                 onclick="openEdit(this)"
                 style="width:32px;height:32px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);cursor:pointer;font-size:13px;color:var(--sub);transition:color .15s"
                 onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--sub)'" title="Edit">
@@ -251,6 +260,36 @@
           <input name="sort_order" type="number" class="f-input" placeholder="0" min="0" value="{{ old('sort_order', 0) }}">
         </div>
 
+        <hr style="border:none;border-top:1px solid var(--border);margin:4px 0">
+
+        <div>
+          <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:2px">Pengaturan Default Outlet Baru</div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:10px">Diterapkan otomatis saat owner menambah outlet dengan jenis ini</div>
+
+          <label class="f-label">Mode Transaksi Default</label>
+          <select name="default_order_mode" class="f-input" style="margin-bottom:10px">
+            <option value="quick" {{ old('default_order_mode', 'quick') === 'quick' ? 'selected' : '' }}>Quick Pay — langsung bayar</option>
+            <option value="kitchen" {{ old('default_order_mode') === 'kitchen' ? 'selected' : '' }}>Kitchen Order — pesan dulu, bayar nanti</option>
+          </select>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;border:1px solid var(--border);cursor:pointer">
+              <input type="checkbox" name="default_enable_opening_shift" value="1" style="accent-color:var(--ac);width:15px;height:15px" {{ old('default_enable_opening_shift') ? 'checked' : '' }}>
+              <div>
+                <div style="font-size:13px;font-weight:600;color:var(--text)">Opening Shift</div>
+                <div style="font-size:11px;color:var(--muted)">Aktif secara default</div>
+              </div>
+            </label>
+            <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;border:1px solid var(--border);cursor:pointer">
+              <input type="checkbox" name="default_enable_barcode_scanner" value="1" style="accent-color:var(--ac);width:15px;height:15px" {{ old('default_enable_barcode_scanner') ? 'checked' : '' }}>
+              <div>
+                <div style="font-size:13px;font-weight:600;color:var(--text)">Barcode Scanner</div>
+                <div style="font-size:11px;color:var(--muted)">Aktif secara default</div>
+              </div>
+            </label>
+          </div>
+        </div>
+
       </div>
       <div style="padding:14px 22px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:flex-end">
         <button type="button" onclick="closeModal('modal-create')"
@@ -345,6 +384,36 @@
           <input id="ed-sort" name="sort_order" type="number" class="f-input" placeholder="0" min="0">
         </div>
 
+        <hr style="border:none;border-top:1px solid var(--border);margin:4px 0">
+
+        <div>
+          <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:2px">Pengaturan Default Outlet Baru</div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:10px">Diterapkan otomatis saat owner menambah outlet dengan jenis ini</div>
+
+          <label class="f-label">Mode Transaksi Default</label>
+          <select id="ed-order-mode" name="default_order_mode" class="f-input" style="margin-bottom:10px">
+            <option value="quick">Quick Pay — langsung bayar</option>
+            <option value="kitchen">Kitchen Order — pesan dulu, bayar nanti</option>
+          </select>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;border:1px solid var(--border);cursor:pointer">
+              <input type="checkbox" id="ed-def-opening" name="default_enable_opening_shift" value="1" style="accent-color:var(--ac);width:15px;height:15px">
+              <div>
+                <div style="font-size:13px;font-weight:600;color:var(--text)">Opening Shift</div>
+                <div style="font-size:11px;color:var(--muted)">Aktif secara default</div>
+              </div>
+            </label>
+            <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;border:1px solid var(--border);cursor:pointer">
+              <input type="checkbox" id="ed-def-barcode" name="default_enable_barcode_scanner" value="1" style="accent-color:var(--ac);width:15px;height:15px">
+              <div>
+                <div style="font-size:13px;font-weight:600;color:var(--text)">Barcode Scanner</div>
+                <div style="font-size:11px;color:var(--muted)">Aktif secara default</div>
+              </div>
+            </label>
+          </div>
+        </div>
+
       </div>
       <div style="padding:14px 22px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:flex-end">
         <button type="button" onclick="closeModal('modal-edit')"
@@ -416,6 +485,9 @@ function openEdit(btn) {
   document.getElementById('ed-sort').value               = d.sort        || 0;
   document.getElementById('ed-ros').checked              = d.ros  === '1';
   document.getElementById('ed-cogs').checked             = d.cogs === '1';
+  document.getElementById('ed-order-mode').value         = d.orderMode   || 'quick';
+  document.getElementById('ed-def-opening').checked      = d.defOpening === '1';
+  document.getElementById('ed-def-barcode').checked      = d.defBarcode === '1';
 
   const icon = d.icon || 'fa-store';
   document.getElementById('ed-icon').value = icon;

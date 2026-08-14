@@ -151,7 +151,7 @@
                 </button>
               </form>
               {{-- Edit --}}
-              <button onclick="openEdit({{ $outlet->id }}, {{ json_encode($outlet->only(['name','address','phone'])) }}, {{ $outlet->outlet_type_id ?? 'null' }}, '{{ $outlet->order_mode }}', {{ json_encode(['province_id'=>$outlet->province_id,'regency_id'=>$outlet->regency_id,'district_id'=>$outlet->district_id,'kelurahan'=>$outlet->kelurahan]) }})"
+              <button onclick="openEdit({{ $outlet->id }}, {{ json_encode($outlet->only(['name','address','phone'])) }}, {{ $outlet->outlet_type_id ?? 'null' }}, '{{ $outlet->order_mode }}', {{ json_encode(['province_id'=>$outlet->province_id,'regency_id'=>$outlet->regency_id,'district_id'=>$outlet->district_id,'kelurahan'=>$outlet->kelurahan,'latitude'=>$outlet->latitude,'longitude'=>$outlet->longitude]) }})"
                 style="width:32px;height:32px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);cursor:pointer;font-size:13px;color:var(--sub);transition:color .15s"
                 onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--sub)'" title="Edit">
                 <i class="fa-solid fa-pen-to-square"></i>
@@ -190,7 +190,10 @@
 .ss-option.selected{color:var(--ac);background:var(--ac-lt);font-weight:600}
 .ss-empty{padding:12px 13px;font-size:12px;color:var(--muted);text-align:center}
 .ss-disabled .ss-input{opacity:.5;pointer-events:none}
+.leaflet-pane,.leaflet-control{z-index:5}
 </style>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 @endif
 
 {{-- ── Modal Edit Outlet ── --}}
@@ -304,6 +307,19 @@
               <label class="f-label">Desa / Kelurahan</label>
               <input type="text" id="edit-kelurahan" name="kelurahan" class="f-input" placeholder="Nama desa atau kelurahan">
             </div>
+          </div>
+
+          <div>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+              <label class="f-label" style="margin:0">Titik Lokasi di Peta <span style="font-weight:400;color:var(--muted)">(opsional)</span></label>
+              <button type="button" onclick="useMyLocationEdit()"
+                style="padding:5px 11px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--sub);font-size:11px;font-weight:600;cursor:pointer;font-family:inherit">
+                <i class="fa-solid fa-location-crosshairs"></i> Lokasi Saya
+              </button>
+            </div>
+            <div id="edit-map" style="height:220px;border-radius:12px;overflow:hidden;border:1px solid var(--border)"></div>
+            <input type="hidden" name="latitude" id="edit-latitude">
+            <input type="hidden" name="longitude" id="edit-longitude">
           </div>
         </div>
 
@@ -518,7 +534,10 @@ async function openEdit(id, data, typeId, orderMode, loc) {
   eRegSS.disable('— Pilih provinsi dulu —');
   eDistSS.disable('— Pilih kab/kota dulu —');
 
+  setEditMapPosition(loc.latitude, loc.longitude);
+
   openModal('modal-edit');
+  if (editMap) setTimeout(() => editMap.invalidateSize(), 50);
 
   // Restore lokasi async (setelah modal terbuka agar user tidak menunggu)
   if (loc.province_id) {
@@ -552,10 +571,63 @@ function highlightMode(mode) {
   document.getElementById('edit-mode-kitchen-label').style.borderColor = mode === 'kitchen' ? ac : 'var(--border)';
 }
 
+// ── Peta lokasi outlet (modal edit) ──────────────────────
+let editMap, editMarker;
+const DEFAULT_MAP_CENTER = [-3.9985, 122.5127]; // Kendari
+
+function initEditMap() {
+  editMap = L.map('edit-map').setView(DEFAULT_MAP_CENTER, 12);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    maxZoom: 19,
+  }).addTo(editMap);
+
+  editMarker = L.marker(DEFAULT_MAP_CENTER, { draggable: true }).addTo(editMap);
+  editMarker.on('dragend', () => syncEditLatLng(editMarker.getLatLng()));
+  editMap.on('click', e => {
+    editMarker.setLatLng(e.latlng);
+    syncEditLatLng(e.latlng);
+  });
+}
+
+function setEditMapPosition(lat, lng) {
+  if (!editMap) return;
+  lat = parseFloat(lat);
+  lng = parseFloat(lng);
+  const hasPos = !isNaN(lat) && !isNaN(lng);
+  const pos = hasPos ? [lat, lng] : DEFAULT_MAP_CENTER;
+  editMap.setView(pos, hasPos ? 16 : 12);
+  editMarker.setLatLng(pos);
+  if (hasPos) syncEditLatLng({ lat, lng });
+  else {
+    document.getElementById('edit-latitude').value  = '';
+    document.getElementById('edit-longitude').value = '';
+  }
+}
+
+function syncEditLatLng(latlng) {
+  document.getElementById('edit-latitude').value  = latlng.lat.toFixed(7);
+  document.getElementById('edit-longitude').value = latlng.lng.toFixed(7);
+}
+
+function useMyLocationEdit() {
+  if (!navigator.geolocation) { alert('Browser tidak mendukung geolokasi.'); return; }
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      const latlng = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      editMap.setView(latlng, 16);
+      editMarker.setLatLng(latlng);
+      syncEditLatLng(latlng);
+    },
+    () => alert('Gagal mengambil lokasi. Pastikan izin lokasi diaktifkan di browser.')
+  );
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('input[name="order_mode"]').forEach(r => {
     r.addEventListener('change', () => highlightMode(r.value));
   });
+  initEditMap();
 });
 
 function confirmDelete(id, name) {

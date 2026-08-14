@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Sewa;
 
 use App\Http\Controllers\Controller;
+use App\Models\Customer;
 use App\Models\Outlet;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
@@ -21,6 +22,8 @@ class DashboardController extends Controller
 
         $outlet->load('outletType', 'owner');
 
-        return view('sewa.show', compact('outlet', 'user'));
+        $totalCustomers = Customer::where('outlet_id', $outlet->id)->count();
+
+        return view('sewa.show', compact('outlet', 'user', 'totalCustomers'));
     }
 }

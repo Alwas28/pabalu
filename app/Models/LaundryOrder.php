@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Str;
 
+#[Hidden(['tracking_token'])]
 class LaundryOrder extends Model
 {
     protected $fillable = [
@@ -15,6 +18,15 @@ class LaundryOrder extends Model
         'subtotal', 'discount_amount', 'total',
         'payment_method', 'payment_amount', 'change_amount', 'paid_at',
     ];
+
+    protected static function booted(): void
+    {
+        // Token acak untuk link tracking publik — order_number sequential/predictable
+        // tidak aman dipakai sebagai kunci lookup publik (rawan enumerasi).
+        static::creating(function (LaundryOrder $order) {
+            $order->tracking_token ??= Str::random(40);
+        });
+    }
 
     protected function casts(): array
     {

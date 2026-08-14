@@ -26,6 +26,13 @@
     @endif
     {{ $slot }}
   </x-laundry-layout>
+@elseif($outlet->rp() === 'sewa')
+  <x-sewa-layout :outlet="$outlet" :pageTitle="$pageTitle">
+    @if(isset($headerAction))
+    <x-slot:headerAction>{{ $headerAction }}</x-slot:headerAction>
+    @endif
+    {{ $slot }}
+  </x-sewa-layout>
 @elseif($outlet->rp() === 'fnb')
 
 {{-- ══════════════════════════════════════════════════════════════════════════════ --}}

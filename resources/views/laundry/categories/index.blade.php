@@ -3,22 +3,24 @@
 {{-- ── HEADER BAR ── --}}
 <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px" class="animate-fadeUp">
   <div>
-    <h2 class="font-display" style="font-size:20px;font-weight:700;color:var(--text)">Kelola Kategori</h2>
+    <h2 class="font-display" style="font-size:20px;font-weight:700;color:var(--text)">Kategori Produk</h2>
     <p style="font-size:13px;color:var(--muted);margin-top:2px">
-      Kategori produk khusus outlet <strong style="color:var(--sub)">{{ $outlet->name }}</strong>
+      Kategori untuk jenis outlet <strong style="color:var(--sub)">{{ $outlet->outletType?->name }}</strong>
     </p>
   </div>
-  @if($user->hasPermission('category.create'))
-  <button onclick="openModal('modal-add')"
-    style="display:flex;align-items:center;gap:8px;padding:10px 18px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--ac),var(--ac2));color:#fff;font-size:13.5px;font-weight:700;cursor:pointer;font-family:inherit;transition:opacity .15s"
-    onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'">
-    <i class="fa-solid fa-plus" style="font-size:12px"></i> Tambah Kategori
-  </button>
-  @endif
+</div>
+
+{{-- ── INFO BANNER ── --}}
+<div class="animate-fadeUp d1" style="display:flex;align-items:flex-start;gap:12px;padding:14px 16px;border-radius:12px;background:var(--ac-lt2);border:1px solid rgba(var(--ac-rgb),.2);margin-top:14px">
+  <i class="fa-solid fa-circle-info" style="color:var(--ac);font-size:14px;margin-top:1px"></i>
+  <div style="font-size:12.5px;color:var(--sub);line-height:1.6">
+    Kategori ditentukan oleh admin untuk semua outlet dengan jenis yang sama, jadi tidak bisa ditambah,
+    diubah, atau dihapus dari sini. Hubungi admin jika perlu kategori baru.
+  </div>
 </div>
 
 {{-- ── STATS ── --}}
-<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px" class="animate-fadeUp d1">
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:16px" class="animate-fadeUp d1">
   <div class="stat-card">
     <div class="stat-icon" style="background:var(--ac-lt);color:var(--ac)">
       <i class="fa-solid fa-tags"></i>
@@ -69,15 +71,9 @@
       <i class="fa-solid fa-tags"></i>
     </div>
     <h3 class="font-display" style="font-size:17px;font-weight:700;color:var(--text);margin-bottom:6px">Belum Ada Kategori</h3>
-    <p style="font-size:13.5px;color:var(--muted);max-width:320px;margin:0 auto 20px">
-      Buat kategori untuk mengelompokkan produk di outlet ini.
+    <p style="font-size:13.5px;color:var(--muted);max-width:340px;margin:0 auto">
+      Admin belum menambahkan kategori untuk jenis outlet ini.
     </p>
-    @if($user->hasPermission('category.create'))
-    <button onclick="openModal('modal-add')"
-      style="padding:10px 22px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--ac),var(--ac2));color:#fff;font-size:13.5px;font-weight:700;cursor:pointer;font-family:inherit">
-      <i class="fa-solid fa-plus" style="margin-right:6px;font-size:12px"></i>Tambah Kategori Pertama
-    </button>
-    @endif
   </div>
   @else
   <div style="overflow-x:auto">
@@ -89,7 +85,6 @@
           <th>Deskripsi</th>
           <th style="text-align:center;width:80px">Urutan</th>
           <th style="text-align:center;width:90px">Status</th>
-          <th style="text-align:center;width:100px">Aksi</th>
         </tr>
       </thead>
       <tbody>
@@ -117,42 +112,10 @@
               <span class="badge badge-gray"><i class="fa-solid fa-circle" style="font-size:6px"></i>Nonaktif</span>
             @endif
           </td>
-          <td style="text-align:center">
-            <div style="display:flex;align-items:center;justify-content:center;gap:6px">
-              @if($user->hasPermission('category.edit'))
-              {{-- Edit --}}
-              <button title="Edit"
-                onclick="openEdit({{ $cat->id }}, {{ json_encode(['name'=>$cat->name,'description'=>$cat->description,'sort_order'=>$cat->sort_order]) }})"
-                style="width:30px;height:30px;border-radius:8px;border:1px solid var(--border);background:transparent;cursor:pointer;color:var(--sub);font-size:12px;transition:all .15s"
-                onmouseover="this.style.background='var(--surface2)';this.style.color='var(--text)'"
-                onmouseout="this.style.background='transparent';this.style.color='var(--sub)'">
-                <i class="fa-solid fa-pen"></i>
-              </button>
-              {{-- Toggle --}}
-              <form method="POST" action="{{ $outlet->route('categories.toggle-active', [$cat]) }}" style="margin:0">
-                @csrf
-                <button type="submit" title="{{ $cat->is_active ? 'Nonaktifkan' : 'Aktifkan' }}"
-                  style="width:30px;height:30px;border-radius:8px;border:1px solid var(--border);background:transparent;cursor:pointer;font-size:12px;transition:all .15s;color:{{ $cat->is_active ? '#fbbf24' : '#34d399' }}"
-                  onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background='transparent'">
-                  <i class="fa-solid {{ $cat->is_active ? 'fa-toggle-on' : 'fa-toggle-off' }}"></i>
-                </button>
-              </form>
-              @endif
-              @if($user->hasPermission('category.delete'))
-              {{-- Delete --}}
-              <button title="Hapus"
-                onclick="openDelete({{ $cat->id }}, '{{ addslashes($cat->name) }}')"
-                style="width:30px;height:30px;border-radius:8px;border:1px solid var(--border);background:transparent;cursor:pointer;color:#f87171;font-size:12px;transition:all .15s"
-                onmouseover="this.style.background='rgba(239,68,68,.1)'" onmouseout="this.style.background='transparent'">
-                <i class="fa-solid fa-trash-can"></i>
-              </button>
-              @endif
-            </div>
-          </td>
         </tr>
         @endforeach
         <tr id="no-result" style="display:none">
-          <td colspan="6" style="text-align:center;padding:32px;color:var(--muted);font-size:13px">
+          <td colspan="5" style="text-align:center;padding:32px;color:var(--muted);font-size:13px">
             <i class="fa-solid fa-magnifying-glass" style="margin-right:6px"></i>Tidak ditemukan
           </td>
         </tr>
@@ -162,145 +125,8 @@
   @endif
 </div>
 
-{{-- ══ MODAL TAMBAH ══ --}}
-@if($user->hasPermission('category.create'))
-<div class="modal-backdrop" id="modal-add" onclick="if(event.target===this)closeModal('modal-add')">
-  <div class="modal-box">
-    <form method="POST" action="{{ $outlet->route('categories.store') }}">
-      @csrf
-      <div style="padding:20px 24px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
-        <h3 class="font-display" style="font-size:16px;font-weight:700;color:var(--text)">Tambah Kategori</h3>
-        <button type="button" onclick="closeModal('modal-add')"
-          style="width:30px;height:30px;border-radius:8px;border:none;background:var(--surface2);cursor:pointer;color:var(--sub);font-size:14px">
-          <i class="fa-solid fa-xmark"></i>
-        </button>
-      </div>
-      <div style="padding:20px 24px;display:flex;flex-direction:column;gap:14px">
-        <div>
-          <label class="f-label">Nama Kategori <span style="color:var(--ac)">*</span></label>
-          <input name="name" class="f-input" required maxlength="100" placeholder="cth: Cuci Kiloan, Cuci Satuan, Express, Dry Clean…" autofocus>
-        </div>
-        <div>
-          <label class="f-label">Deskripsi <span style="color:var(--muted);font-weight:400">(opsional)</span></label>
-          <textarea name="description" class="f-input" rows="2" maxlength="300" placeholder="Keterangan singkat kategori ini"></textarea>
-        </div>
-        <div>
-          <label class="f-label">Urutan Tampil</label>
-          <input name="sort_order" type="number" class="f-input" value="0" min="0" max="9999"
-            style="width:120px" placeholder="0">
-          <p style="font-size:11.5px;color:var(--muted);margin-top:4px">Angka lebih kecil tampil lebih dulu</p>
-        </div>
-      </div>
-      <div style="padding:16px 24px 20px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:flex-end">
-        <button type="button" onclick="closeModal('modal-add')"
-          style="padding:9px 18px;border-radius:11px;border:1px solid var(--border);background:transparent;cursor:pointer;font-size:13px;font-weight:600;color:var(--sub);font-family:inherit">
-          Batal
-        </button>
-        <button type="submit"
-          style="padding:9px 22px;border-radius:11px;border:none;background:linear-gradient(135deg,var(--ac),var(--ac2));color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">
-          Simpan
-        </button>
-      </div>
-    </form>
-  </div>
-</div>
-
-@endif
-
-{{-- ══ MODAL EDIT ══ --}}
-@if($user->hasPermission('category.edit'))
-<div class="modal-backdrop" id="modal-edit" onclick="if(event.target===this)closeModal('modal-edit')">
-  <div class="modal-box">
-    <form id="form-edit" method="POST" action="">
-      @csrf @method('PUT')
-      <div style="padding:20px 24px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
-        <h3 class="font-display" style="font-size:16px;font-weight:700;color:var(--text)">Edit Kategori</h3>
-        <button type="button" onclick="closeModal('modal-edit')"
-          style="width:30px;height:30px;border-radius:8px;border:none;background:var(--surface2);cursor:pointer;color:var(--sub);font-size:14px">
-          <i class="fa-solid fa-xmark"></i>
-        </button>
-      </div>
-      <div style="padding:20px 24px;display:flex;flex-direction:column;gap:14px">
-        <div>
-          <label class="f-label">Nama Kategori <span style="color:var(--ac)">*</span></label>
-          <input name="name" id="edit-name" class="f-input" required maxlength="100">
-        </div>
-        <div>
-          <label class="f-label">Deskripsi <span style="color:var(--muted);font-weight:400">(opsional)</span></label>
-          <textarea name="description" id="edit-desc" class="f-input" rows="2" maxlength="300"></textarea>
-        </div>
-        <div>
-          <label class="f-label">Urutan Tampil</label>
-          <input name="sort_order" id="edit-sort" type="number" class="f-input" min="0" max="9999" style="width:120px">
-          <p style="font-size:11.5px;color:var(--muted);margin-top:4px">Angka lebih kecil tampil lebih dulu</p>
-        </div>
-      </div>
-      <div style="padding:16px 24px 20px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:flex-end">
-        <button type="button" onclick="closeModal('modal-edit')"
-          style="padding:9px 18px;border-radius:11px;border:1px solid var(--border);background:transparent;cursor:pointer;font-size:13px;font-weight:600;color:var(--sub);font-family:inherit">
-          Batal
-        </button>
-        <button type="submit"
-          style="padding:9px 22px;border-radius:11px;border:none;background:linear-gradient(135deg,var(--ac),var(--ac2));color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">
-          Simpan Perubahan
-        </button>
-      </div>
-    </form>
-  </div>
-</div>
-
-@endif
-
-{{-- ══ MODAL HAPUS ══ --}}
-@if($user->hasPermission('category.delete'))
-<div class="modal-backdrop" id="modal-delete" onclick="if(event.target===this)closeModal('modal-delete')">
-  <div class="modal-box" style="max-width:380px">
-    <form id="form-delete" method="POST" action="">
-      @csrf @method('DELETE')
-      <div style="padding:28px 24px 20px;text-align:center">
-        <div style="width:52px;height:52px;border-radius:14px;background:rgba(239,68,68,.15);display:grid;place-items:center;margin:0 auto 16px;color:#f87171;font-size:20px">
-          <i class="fa-solid fa-trash-can"></i>
-        </div>
-        <h3 class="font-display" style="font-size:17px;font-weight:700;color:var(--text);margin-bottom:6px">Hapus Kategori?</h3>
-        <p style="font-size:13.5px;color:var(--muted)">
-          Kategori <strong id="delete-name" style="color:var(--text)"></strong> akan dihapus permanen.
-          Produk yang menggunakan kategori ini tidak ikut terhapus.
-        </p>
-      </div>
-      <div style="padding:0 24px 24px;display:flex;gap:10px">
-        <button type="button" onclick="closeModal('modal-delete')"
-          style="flex:1;padding:10px;border-radius:11px;border:1px solid var(--border);background:transparent;cursor:pointer;font-size:13.5px;font-weight:600;color:var(--sub);font-family:inherit">
-          Batal
-        </button>
-        <button type="submit"
-          style="flex:1;padding:10px;border-radius:11px;border:none;background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;font-size:13.5px;font-weight:700;cursor:pointer;font-family:inherit">
-          Hapus
-        </button>
-      </div>
-    </form>
-  </div>
-</div>
-@endif
-
 @push('scripts')
 <script>
-const outletId = {{ $outlet->id }};
-const outletRp = '{{ $outlet->rp() }}';
-
-function openEdit(id, data) {
-  document.getElementById('form-edit').action = `/${outletRp}/${outletId}/categories/${id}`;
-  document.getElementById('edit-name').value  = data.name || '';
-  document.getElementById('edit-desc').value  = data.description || '';
-  document.getElementById('edit-sort').value  = data.sort_order ?? 0;
-  openModal('modal-edit');
-}
-
-function openDelete(id, name) {
-  document.getElementById('form-delete').action = `/${outletRp}/${outletId}/categories/${id}`;
-  document.getElementById('delete-name').textContent = name;
-  openModal('modal-delete');
-}
-
 function filterRows() {
   const q = document.getElementById('search-input').value.toLowerCase().trim();
   const rows = document.querySelectorAll('.cat-row');
@@ -313,14 +139,6 @@ function filterRows() {
   const noResult = document.getElementById('no-result');
   if (noResult) noResult.style.display = visible === 0 ? '' : 'none';
 }
-
-@if($errors->any())
-@if(old('_method') === 'PUT')
-  openModal('modal-edit');
-@else
-  openModal('modal-add');
-@endif
-@endif
 </script>
 @endpush
 

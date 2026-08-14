@@ -538,7 +538,7 @@ class OrderController extends Controller
         $outlet->load('outletType');
         $order->load(['items', 'user']);
 
-        $trackUrl = route('public.menu.track', [$outlet->code, $order->order_number]);
+        $trackUrl = route('public.menu.track', [$outlet->code, $order->tracking_token]);
 
         return view('fnb.orders.bill', compact('outlet', 'order', 'trackUrl'));
     }

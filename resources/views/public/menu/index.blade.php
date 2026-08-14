@@ -179,7 +179,12 @@
 #img-lb-name{color:#fff;font-size:15px;font-weight:700;margin-top:14px;text-align:center;max-width:320px;line-height:1.4}
 #img-lb-close{position:absolute;top:18px;right:18px;width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.15);border:none;color:#fff;font-size:16px;cursor:pointer;display:grid;place-items:center}
 #img-lb-close:hover{background:rgba(255,255,255,.25)}
+
+/* ─── Peta lokasi outlet ──────────────────────────── */
+#outlet-map{height:180px;border-radius:14px;overflow:hidden;margin:0 20px 14px;border:1px solid #f0f0f0}
+.map-link{display:flex;align-items:center;justify-content:center;gap:7px;margin:0 20px 16px;padding:11px;border-radius:12px;background:var(--red-soft);color:var(--red);font-size:12.5px;font-weight:700;text-decoration:none}
 </style>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
 </x-slot>
 
 @php
@@ -442,6 +447,14 @@
     <div><div class="lbl">Kontak</div><div class="val">{{ $outlet->phone }}</div></div>
   </div>
   @endif
+  @if($outlet->latitude && $outlet->longitude)
+  <div style="padding:14px 0 0">
+    <div id="outlet-map"></div>
+    <a class="map-link" href="https://www.google.com/maps?q={{ $outlet->latitude }},{{ $outlet->longitude }}" target="_blank" rel="noopener">
+      <i class="fa-solid fa-diamond-turn-right"></i> Buka di Google Maps
+    </a>
+  </div>
+  @endif
   @if($outlet->phone)
   <div class="info-actions">
     <a class="tel" href="tel:{{ $outlet->phone }}"><i class="fa-solid fa-phone"></i>Telepon</a>
@@ -452,6 +465,7 @@
 </div>
 
 <x-slot name="scripts">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script>
 const ORDER_URL  = '{{ route("public.menu.order", $outlet->code) }}';
 const CSRF       = document.querySelector('meta[name="csrf-token"]').content;
@@ -696,9 +710,26 @@ function clearSearch() {
 }
 
 /* ── Bottom nav: Info sheet ─ */
+let outletMapInited = false;
 function openInfo() {
   document.getElementById('info-overlay').classList.add('open');
   document.getElementById('info-sheet').classList.add('open');
+  initOutletMapOnce();
+}
+
+function initOutletMapOnce() {
+  const el = document.getElementById('outlet-map');
+  if (!el || outletMapInited) return;
+  outletMapInited = true;
+  const lat = {{ $outlet->latitude ?? 'null' }};
+  const lng = {{ $outlet->longitude ?? 'null' }};
+  const map = L.map('outlet-map', { zoomControl: false, dragging: false, scrollWheelZoom: false }).setView([lat, lng], 16);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap',
+    maxZoom: 19,
+  }).addTo(map);
+  L.marker([lat, lng]).addTo(map);
+  setTimeout(() => map.invalidateSize(), 200);
 }
 function closeInfo() {
   document.getElementById('info-overlay').classList.remove('open');

@@ -1,0 +1,455 @@
+===================================================================
+LAPORAN AUDIT KEAMANAN — PABALU2
+Tanggal audit: 10 Agustus 2026
+Cakupan: Seluruh codebase (auth, otorisasi, model/database, blade views,
+         routes/middleware, upload file, konfigurasi & secrets)
+Catatan versi: composer.json/composer.lock menunjukkan aplikasi berjalan
+di Laravel v13.14.0 (bukan Laravel 11) — relevan untuk penilaian CVE.
+===================================================================
+
+
+===================================================================
+1. TEMUAN KRITIS
+===================================================================
+
+--------------------------------------------------------------
+1.1 Stored XSS di halaman index produk/unit
+--------------------------------------------------------------
+Pola bermasalah:
+    onclick='openEdit({{ $x->id }}, {!! json_encode([...]) !!})'
+
+Masalah: {!! !!} melewati auto-escape Blade, dan json_encode() PHP TIDAK
+meng-escape karakter apostrof ('). Karena atribut onclick dibungkus tanda
+kutip tunggal, satu karakter (') pada data akan memutus atribut dan
+mengizinkan injeksi HTML/JS.
+
+Lokasi:
+  - resources/views/fnb/products/index.blade.php:194-204
+  - resources/views/retail/products/index.blade.php:194-204
+  - resources/views/laundry/products/index.blade.php:194-204
+  - resources/views/salon/products/index.blade.php:194-204
+  - resources/views/sewa/items/index.blade.php:113-118 (name, description)
+  - resources/views/sewa/maintenance/index.blade.php:113-120 (reason, notes)
+  - resources/views/sewa/units/index.blade.php:129-135 (condition, notes)
+
+Field rentan: name, description, reason, notes, condition — tidak ada
+validasi yang menolak karakter kutip/HTML pada input ini, misalnya:
+  app/Http/Controllers/Fnb/ProductController.php:36-42
+    'name'        => ['required', 'string', 'max:150'],
+    'description' => ['nullable', 'string', 'max:1000'],
+
+Dampak: siapa pun dengan izin product.edit/product.create (biasanya
+kasir/staf outlet, bukan hanya owner) bisa menyisipkan payload seperti:
+    Kopi' onmouseover='alert(document.cookie)
+yang akan tereksekusi di sesi user LAIN (admin/owner) saat mereka membuka
+halaman daftar produk/unit — stored XSS dengan potensi pencurian
+cookie/CSRF token, dan merupakan celah eskalasi privilese lateral
+(staf level rendah bisa menyerang sesi admin/owner).
+
+Perbandingan positif (pola AMAN yang sudah dipakai di file lain, tinggal
+disamakan): resources/views/outlet-types/show.blade.php:129,
+outlets/index.blade.php:154, settings/tabs/categories.blade.php:80,
+settings/tabs/header.blade.php:71, settings/tabs/menu.blade.php:55,95,
+sewa/customers/index.blade.php:56,60, sewa/fines/index.blade.php:112,
+sewa/refunds/index.blade.php:102, sewa/rentals/active.blade.php:108,113,
+sewa/rentals/extend.blade.php:49, sewa/rentals/returns.blade.php:56,
+sewa/settings/tabs/requirements.blade.php:42,46 — semua memakai
+{{ json_encode(...) }} (double brace) sehingga tetap ter-escape.
+
+Rekomendasi perbaikan: ganti json_encode() mentah dengan Js::from() atau
+@json() pada 7 lokasi di atas, atau ubah kutip atribut ke (") dan tetap
+gunakan {{ }} bukan {!! !!}.
+
+
+--------------------------------------------------------------
+1.2 IDOR di UserController — lintas-tenant, owner bisa akses akun
+    kasir/admin_outlet milik owner LAIN
+--------------------------------------------------------------
+File: app/Http/Controllers/UserController.php
+
+authorizeManager() (baris 18-23) hanya mengecek role pemanggil ada di
+['admin','owner'] — TIDAK PERNAH memverifikasi bahwa target User memang
+bekerja di outlet milik owner yang login:
+  - index() (40-52): listing untuk role owner hanya di-filter dengan
+    whereNotIn('slug', ['admin','owner']), bukan berdasarkan kepemilikan
+    outlet -> owner bisa melihat SEMUA akun kasir/admin_outlet di seluruh
+    sistem, termasuk milik outlet owner lain.
+  - edit() (93-106), update() (108-137), destroy() (139-161): hanya
+    mengecek $user->role bukan admin, TANPA cek $user terdaftar di
+    outlet milik owner yang login.
+
+Dampak: Owner A dapat melihat, mengedit (ubah nama/email/role), atau
+MENGHAPUS akun kasir/admin_outlet yang sebenarnya milik outlet Owner B.
+
+Pembanding yang sudah benar: EmployeeController::resolveEmployee()
+(app/Http/Controllers/EmployeeController.php:68-78) sudah men-scope
+query dengan owner_id — pola ini yang seharusnya juga diterapkan di
+UserController.
+
+
+--------------------------------------------------------------
+1.3 Enumerasi pesanan pelanggan tanpa autentikasi
+--------------------------------------------------------------
+Endpoint publik (tanpa auth, tanpa rate limit) melakukan lookup order
+HANYA berdasarkan order_number yang sequential/predictable:
+
+  - app/Http/Controllers/Public/MenuController.php:208-217 (track())
+    Query: Order::where('outlet_id', $outlet->id)
+                 ->where('order_number', $orderNumber)->firstOrFail()
+    Nomor order dibuat predictable:
+      'SELF-' . $outlet->code . '-' . now()->format('ymd') . '-' . seq
+    (MenuController.php:219-233)
+
+  - app/Http/Controllers/Laundry/TrackOrderController.php:11-18 (show())
+    Lookup LaundryOrder berdasarkan order_number SECARA GLOBAL (bahkan
+    tidak di-scope per outlet), firstOrFail(), tanpa auth.
+    Nomor order predictable:
+      'LDR-' . $outletCode . '-' . $dateLabel . '-' . str_pad(seq,3,'0')
+    (app/Http/Controllers/Laundry/LaundryOrderController.php:108-115)
+    View resources/views/laundry/track.blade.php:147 menampilkan nama
+    pelanggan, tanggal order, estimasi selesai, daftar item, dan nomor
+    telepon outlet.
+
+Dampak: penyerang yang iterasi pola
+"LDR-{KODE}-{YYYYMMDD}-001, 002, 003..." lintas tanggal/kode outlet
+dapat mengenumerasi detail pesanan pelanggan LAIN tanpa autentikasi
+maupun throttling sama sekali.
+
+
+===================================================================
+2. TEMUAN TINGGI
+===================================================================
+
+--------------------------------------------------------------
+2.1 Midtrans server key tersimpan plaintext & bocor ke HTML
+--------------------------------------------------------------
+  - app/Services/MidtransService.php:15 mengambil server key langsung
+    dari kolom database per-outlet: $outlet->midtrans_server_key
+  - Migrasi database/migrations/2026_06_16_125846_add_payment_settings
+    _to_outlets_table.php:19-21 mendefinisikan kolom sebagai
+    $table->string(...)->nullable() TANPA enkripsi.
+  - app/Models/Outlet.php tidak mendeklarasikan cast 'encrypted' untuk
+    kolom ini (hanya midtrans_is_production yang di-cast boolean).
+  - Server key (rahasia server-to-server untuk Basic Auth ke API
+    Midtrans, MidtransService.php:24,52) ditampilkan BALIK sebagai
+    plaintext ke form HTML di 5 tempat:
+      resources/views/fnb/settings.blade.php:297
+      resources/views/laundry/settings.blade.php:334
+      resources/views/retail/settings.blade.php:332
+      resources/views/salon/settings.blade.php:334
+      resources/views/sewa/settings/tabs/payment.blade.php:133
+
+Dampak: siapa pun yang bisa membuka halaman Settings outlet akan melihat
+Midtrans server key dalam bentuk plaintext di HTML source — perlu
+diverifikasi role/middleware apa yang benar-benar menjaga akses ke
+halaman settings ini (apakah kasir/admin_outlet bisa mengaksesnya).
+
+
+--------------------------------------------------------------
+2.2 File bukti pembayaran tersimpan di disk publik tanpa kontrol akses
+--------------------------------------------------------------
+Disimpan di disk 'public' (dipublikasikan penuh lewat symlink
+storage:link, tanpa middleware/otorisasi Laravel):
+  - app/Http/Controllers/Fnb/PosController.php:183 ('payment-proofs')
+  - app/Http/Controllers/Laundry/PosController.php:186
+  - app/Http/Controllers/Salon/PosController.php:186
+  - app/Http/Controllers/Retail/PosController.php:174
+  - app/Http/Controllers/Fnb/OrderController.php:404 ('proof-transaksi')
+  - app/Http/Controllers/Sewa/RentalController.php:127,284
+    ('rental-payments/{outlet_id}')
+  - app/Http/Controllers/Sewa/FineController.php:105
+
+Dampak: foto bukti pembayaran/transfer (data finansial pelanggan/kasir)
+bisa diakses siapa saja yang mengetahui/menebak URL file
+(/storage/payment-proofs/xxxx.jpg) TANPA login, karena disk public tidak
+melewati route/middleware aplikasi. Proteksi saat ini hanya nama file
+acak (security-by-obscurity), bukan kontrol akses eksplisit.
+
+
+--------------------------------------------------------------
+2.3 Potensi kebocoran stack trace di endpoint API/JSON saat produksi
+    salah konfigurasi
+--------------------------------------------------------------
+  - .env.example: APP_DEBUG=true (baris 4), LOG_LEVEL=debug (baris 21)
+    sebagai nilai default template.
+  - config/app.php:42 -> 'debug' => (bool) env('APP_DEBUG', false)
+    (default fallback di KODE sudah aman/false — risiko hanya muncul
+    jika .env produksi eksplisit diisi true, misalnya hasil copy-paste
+    dari .env.example tanpa diubah).
+  - bootstrap/app.php -> shouldRenderJsonWhen() dikonfigurasi untuk
+    request api/*, isJson(), atau expectsJson() — artinya jika
+    APP_DEBUG=true di produksi, endpoint yang dipanggil lewat AJAX/JS
+    (dipakai luas di app ini: charge/status QRIS, chat, dsb.) akan
+    mengembalikan JSON berisi stack trace/exception message LENGKAP
+    saat terjadi error, bukan hanya halaman HTML error biasa.
+
+Rekomendasi: pastikan .env produksi eksplisit APP_ENV=production,
+APP_DEBUG=false, LOG_LEVEL=error/warning (jangan mengandalkan default
+template).
+
+
+===================================================================
+3. TEMUAN SEDANG
+===================================================================
+
+3.1 Kebijakan password tidak konsisten
+    - Registrasi mandiri (RegisteredUserController.php:37) dan
+      UserController mewajibkan Password::defaults() (default Laravel:
+      minimal 8 karakter).
+    - EmployeeController.php:359,373 (createAccount/updateAccount saat
+      owner membuatkan akun kasir/admin_outlet) hanya mewajibkan
+      'min:6' tanpa aturan Password::defaults() — kebijakan lebih
+      lemah untuk akun yang justru dibuat oleh pihak ketiga (owner),
+      bukan oleh pemilik akun sendiri.
+
+3.2 Bug potensial di app/Http/Controllers/UserController.php:76
+    Memanggil Rules\Password::defaults() padahal yang di-import
+    (baris 10) adalah "use Illuminate\Validation\Rules\Password;" —
+    tanpa prefix Rules\. Referensi Rules\Password::defaults() akan
+    coba di-resolve ke App\Http\Controllers\Rules\Password yang TIDAK
+    ADA -> berpotensi fatal error "Class not found" saat admin/owner
+    memanggil store() untuk membuat user baru. Baris 168 di file yang
+    sama memakai Password::defaults() dengan benar (tanpa prefix) —
+    inkonsistensi ini mengindikasikan jalur store() mungkin belum
+    teruji/tidak berfungsi. PERLU DIVERIFIKASI & DIPERBAIKI.
+
+3.3 WilayahController::apiRegencies()/apiDistricts() tanpa authorizeAdmin()
+    File: app/Http/Controllers/WilayahController.php:121-136
+    Method lain di controller yang sama SELALU memanggil
+    authorizeAdmin() sebelum eksekusi, tapi dua method ini tidak.
+    Komentar di routes/web.php:678 menyebut "API cascading (no auth
+    required for dropdown use)", padahal route tetap berada di dalam
+    grup ['auth','verified','require.setup'] (routes/web.php:490) —
+    jadi realitanya "auth diperlukan, tapi role apa pun boleh", bukan
+    benar-benar "no auth required" seperti komentarnya. Data yang
+    diekspos (nama provinsi/kabupaten/kecamatan) bersensitivitas
+    rendah, tapi ada gap antara komentar dan implementasi.
+
+3.4 Upload SVG diizinkan untuk logo partner
+    File: app/Http/Controllers/PartnerController.php:27,46
+    'logo' => [..., 'image', 'mimes:jpg,jpeg,png,webp,svg', 'max:2048']
+    SVG dapat memuat <script>/event handler JS. Jika file ini nantinya
+    disajikan inline (bukan lewat <img> yang di-sandbox atau header
+    Content-Disposition: attachment) dari storage/app/public/partners/,
+    berpotensi stored XSS via SVG upload saat file dibuka langsung di
+    tab browser — tergantung Content-Type yang disajikan web
+    server/Storage::url(). PERLU VERIFIKASI cara file ini dirender di
+    halaman publik (carousel logo partner).
+
+3.5 SESSION_SECURE_COOKIE tidak di-set default
+    config/session.php baris 172: 'secure' => env('SESSION_SECURE_
+    COOKIE') tanpa default hardcoded -> null/falsy kecuali .env
+    eksplisit set SESSION_SECURE_COOKIE=true. .env.example tidak
+    menetapkan variabel ini sama sekali. Jika lupa diisi eksplisit di
+    .env produksi, cookie sesi bisa terkirim lewat koneksi non-HTTPS.
+
+
+===================================================================
+4. TEMUAN RENDAH / INFORMATIONAL
+===================================================================
+
+4.1 resources/views/pages/show.blade.php:39
+    <div class="body">{!! $page->content !!}</div>
+    Konten CMS halaman statis ditampilkan tanpa escape. Diedit oleh
+    admin lewat editor rich-text (bukan input publik langsung), jadi
+    risiko bergantung pada trust level akun admin/editor. Tidak
+    ditemukan pemanggilan HTML purifier di app/ sebagai lapisan
+    pertahanan kedua jika akun admin/CMS disusupi.
+
+4.2 resources/views/fnb/orders/show.blade.php:298-313
+    {!! $mergeable->mapWithKeys(...)->toJson() !!} di dalam
+    <script type="application/json">. Data (customer_name, order_
+    number, product_name) berasal dari input pengguna termasuk dari
+    self-order publik. Collection::toJson() meng-escape karakter "/"
+    (mencegah breakout </script> secara efektif) sehingga risiko
+    rendah/tidak eksploitatif untuk skenario ini, namun sebaiknya
+    tetap distandarkan ke @json() untuk konsistensi & defense-in-depth.
+
+4.3 database/database.sqlite tidak eksplisit ada di .gitignore
+    Saat ini file tersebut memang belum ter-track di git, tapi tidak
+    ada baris eksplisit yang mencegahnya jika suatu saat ada yang
+    lupa dan menjalankan "git add -A".
+
+4.4 Sistem role/permission murni custom
+    Tidak ditemukan spatie/laravel-permission, laravel/sanctum, atau
+    laravel/passport di composer.lock. Role & permission diimplemen-
+    tasikan sendiri ($user->role sebagai string, $user->hasPermission()
+    custom) — sudah diaudit pada bagian otorisasi di atas, namun perlu
+    diingat tidak ada hardening bawaan dari paket pihak ketiga yang
+    bisa diandalkan untuk area ini ke depannya.
+
+4.5 Framework version discrepancy
+    composer.json mensyaratkan "laravel/framework": "^13.8" dan
+    composer.lock mengunci v13.14.0 — bukan Laravel 11. Perlu
+    diklarifikasi ke tim agar basis audit CVE/EOL ke depan tepat.
+
+
+===================================================================
+5. YANG SUDAH BAIK (POSITIF)
+===================================================================
+
+5.1 Autentikasi & Sesi
+    - Session di-regenerate saat login (mitigasi session fixation):
+      app/Http/Controllers/Auth/AuthenticatedSessionController.php:25-32
+    - Logout memanggil session()->invalidate() dan
+      session()->regenerateToken() (baris 37-46).
+    - Rate limiting login: app/Http/Requests/Auth/LoginRequest.php:
+      41-85 — RateLimiter kunci email|ip, lockout setelah 5 percobaan
+      gagal.
+    - Password reset & email verification punya throttle:6,1 eksplisit
+      di routes/auth.php:43,49.
+    - Password selalu di-hash dengan Hash::make() (RegisteredUser
+      Controller.php:45, UserController.php:83,171, EmployeeController
+      .php:413,374) + cast 'password' => 'hashed' di User model
+      (app/Models/User.php:32) sebagai lapisan kedua otomatis.
+    - Tidak ditemukan penyimpanan password plaintext/md5/sha1 di
+      manapun.
+
+5.2 Otorisasi & Kontrol Akses
+    - Pola authorizeOutlet() diterapkan konsisten di 63 controller
+      (grep terkonfirmasi), memanggil Outlet::isAccessibleBy() (app/
+      Models/Outlet.php:177-182) yang benar men-scope: admin lihat
+      semua, owner lihat outlet miliknya, kasir/admin_outlet lihat
+      outlet tempat mereka terdaftar sebagai pegawai.
+    - Hampir semua controller Sewa memasangkan authorizeOutlet() DENGAN
+      pengecekan kedua bahwa resource anak (transaksi, customer, item,
+      unit, maintenance, payment, dsb) benar milik outlet tsb sebelum
+      dipakai — mencegah IDOR pada level resource turunan. Contoh:
+      Sewa/RentalController.php:34-39, Sewa/CustomerController.php:
+      27-32, Sewa/ItemController.php:29-34, Sewa/UnitController.php:
+      26-31, Fnb/ProductController.php:100,138,159, SelfOrderController
+      .php:25-29.
+    - Perhitungan nilai finansial sensitif (potongan deposit/denda)
+      DIHITUNG ULANG di server, tidak percaya nilai dari klien:
+      Sewa/RentalController.php:262-266, Sewa/FineController.php:86-87.
+    - Sewa/SettingController memakai guard lebih ketat (authorizeOwner,
+      hanya admin/owner — bukan admin_outlet/kasir) khusus untuk
+      pengaturan sensitif seperti Midtrans keys — pembatasan yang
+      disengaja, bukan celah.
+    - OutletController::update()/destroy()/toggleActive() mengecek
+      hasPermission() DAN kepemilikan outlet (owner_id) sekaligus.
+
+5.3 Mass Assignment & Model
+    - Seluruh 46 model di app/Models/*.php mendefinisikan whitelist
+      eksplisit ($fillable klasik atau atribut #[Fillable([...])]) —
+      TIDAK ADA satu pun model dengan $guarded=[] atau tanpa definisi
+      sama sekali.
+    - Tidak ditemukan pola berbahaya Model::create($request->all())
+      atau ->fill($request->all())/->update($request->all()) di
+      seluruh app/.
+    - Satu-satunya ->fill() (ProfileController.php:36) memakai hasil
+      $request->validated(), bukan raw input, dan rules-nya hanya
+      mengizinkan name/email/phone.
+    - Role assignment terkontrol lewat whitelist eksplisit
+      (UserController.php:33-38,75; EmployeeController.php:360,401) —
+      owner tidak bisa membuat/mengubah user jadi admin/owner.
+
+5.4 SQL Injection
+    - Tidak ditemukan DB::select(), DB::statement(), atau
+      DB::unprepared() di seluruh app/.
+    - Seluruh DB::raw()/selectRaw()/whereRaw() yang ditemukan memakai
+      string SQL STATIS (agregasi SUM/DATE_FORMAT/CAST), tanpa
+      interpolasi variabel input user langsung.
+    - Satu-satunya variabel yang masuk ke string raw ($dateFmt di
+      Sewa/*ReportController.php) dibatasi ke 2 konstanta hardcoded
+      lewat ternary berbasis selisih tanggal — bukan dari input user
+      bebas, sehingga bukan vektor SQL injection.
+    - Semua filter pencarian (LIKE) dari input user melewati parameter
+      binding Eloquent standar (->where(col,'like',...)), bukan raw
+      string concatenation.
+
+5.5 CSRF Protection
+    - Tidak ada VerifyCsrfToken override atau exception apa pun di
+      bootstrap/app.php — proteksi CSRF default Laravel aktif penuh
+      untuk seluruh route web.
+    - Sampling otomatis: 197/197 form dengan method="post" di seluruh
+      resources/views/**/*.blade.php MENYERTAKAN @csrf — tidak ada
+      satupun yang kehilangan token.
+    - Endpoint self-order publik (fetch() berbasis JS, bukan <form>)
+      tetap mengirim CSRF token eksplisit lewat header X-CSRF-TOKEN.
+
+5.6 File Upload
+    - Semua titik upload yang diperiksa (HomeSliderController,
+      HomeCategoryController, PageController, PartnerController,
+      EmployeeController, Fnb/Retail ProductController, Sewa/Item
+      Controller, Sewa/RentalController) memvalidasi 'image'/mimes
+      dan max size SEBELUM menyimpan.
+    - Nama file SELALU di-generate ulang otomatis oleh Laravel
+      (->store() tanpa nama eksplisit), TIDAK pernah memakai nama asli
+      dari user (getClientOriginalName() tidak ditemukan dipakai untuk
+      penyimpanan) — aman dari path traversal.
+    - Batas jumlah file upload di-cek ulang di server (Sewa/
+      ItemController.php:117-121, RentalItem::MAX_IMAGES) — mencegah
+      bypass limit dari sisi client.
+    - Endpoint export laporan (Fnb/SalesReportController.php:129-164)
+      melakukan authorizeOutlet() + hasPermission('report.sales')
+      SEBELUM generate file, dan nama file dibangun dari data internal
+      (bukan path dari input user) — tidak ada indikasi path
+      traversal/LFI.
+    - Tidak ditemukan pola file_get_contents()/readfile()/
+      response()->download()/Storage::get() yang menerima path
+      langsung dari $request di seluruh app/.
+
+5.7 Konfigurasi & Secrets
+    - Tidak ada file .env, .sql, .pem, .key, atau kredensial apa pun
+      yang PERNAH ter-commit ke git (histori penuh diperiksa,
+      termasuk git log --all --diff-filter=A).
+    - .gitignore mencakup .env, .env.backup, .env.production, /vendor,
+      /node_modules, storage/*.key, /auth.json.
+    - config/database.php, config/mail.php, config/services.php
+      seluruhnya memakai env(...), tidak ada kredensial hardcoded
+      literal ditemukan di app/ maupun config/.
+    - config/app.php memakai default aman: env('APP_ENV','production')
+      dan env('APP_DEBUG', false) — jika variabel env tidak diset sama
+      sekali, aplikasi otomatis fallback ke kondisi aman.
+    - Tidak ditemukan dd(), dump(), var_dump(), atau Log:: dengan data
+      sensitif (password/token/card) di app/Http/Controllers.
+
+5.8 Routes & Middleware
+    - Route publik tanpa auth (halaman statis, pencarian, katalog,
+      menu self-order, tracking) semuanya DISENGAJA dan diberi
+      komentar eksplisit di kode (mis. "Public self-ordering F&B (no
+      auth)"), dengan proteksi read-only + pengecekan is_active pada
+      controller terkait — kecuali gap enumerasi order di bagian 1.3.
+    - Route-model binding {outlet}/{id}/dst yang implisit (unscoped)
+      secara struktural berisiko, TAPI konsisten dimitigasi dengan
+      pengecekan manual kepemilikan di controller pada seluruh area
+      yang diperiksa (kecuali UserController, lihat 1.2).
+
+
+===================================================================
+6. RINGKASAN PRIORITAS PERBAIKAN
+===================================================================
+1. [KRITIS] Perbaiki 7 lokasi stored XSS (json_encode -> Js::from()/@json())
+2. [KRITIS] Tambahkan scoping owner_id di UserController (index/edit/update/destroy)
+3. [KRITIS] Tambahkan auth/rate-limit pada endpoint tracking order publik,
+   atau ganti order_number dengan token acak yang tidak predictable
+4. [TINGGI] Enkripsi kolom midtrans_server_key/midtrans_client_key (cast 'encrypted'),
+   jangan tampilkan balik plaintext ke form (mask/placeholder saja)
+5. [TINGGI] Pindahkan file bukti pembayaran ke disk private + serve lewat
+   route terautentikasi, bukan disk public
+6. [TINGGI] Pastikan .env produksi eksplisit APP_DEBUG=false, APP_ENV=production,
+   LOG_LEVEL yang sesuai (jangan andalkan default template)
+7. [SEDANG] Samakan kebijakan password (min 8 + Password::defaults()) di
+   EmployeeController untuk akun kasir/admin_outlet
+8. [SEDANG] Perbaiki bug namespace Rules\Password::defaults() di
+   UserController.php:76
+9. [SEDANG] Tambahkan authorizeAdmin() di WilayahController::apiRegencies/apiDistricts
+   atau perbaiki komentar agar sesuai implementasi sebenarnya
+10. [SEDANG] Pertimbangkan larang mime svg pada upload logo partner, atau
+    pastikan disajikan dengan Content-Disposition: attachment
+11. [SEDANG] Set SESSION_SECURE_COOKIE=true eksplisit di .env produksi (HTTPS)
+
+===================================================================
+CATATAN METODOLOGI
+===================================================================
+Audit dilakukan melalui pembacaan kode sumber (statis) menyeluruh atas:
+app/Http/Controllers/**, app/Models/**, app/Http/Middleware/**,
+resources/views/**/*.blade.php, routes/web.php, routes/auth.php,
+config/*.php, bootstrap/app.php, composer.json/composer.lock,
+package.json, .gitignore, .env.example, serta histori git penuh untuk
+deteksi kebocoran secret. Audit ini TIDAK mencakup: dynamic/penetration
+testing terhadap instance yang berjalan, audit dependency third-party
+untuk CVE spesifik per versi, load/stress testing, maupun review
+konfigurasi server/infrastruktur (web server, firewall, DB server).
+===================================================================

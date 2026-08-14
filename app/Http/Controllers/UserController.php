@@ -29,6 +29,28 @@ class UserController extends Controller
         }
     }
 
+    // Owner hanya boleh mengelola user (kasir/admin_outlet) yang dia buat sendiri,
+    // atau yang sudah ditugaskan di salah satu outlet miliknya. Admin bebas akses semua user.
+    private function ownsUser(User $actor, User $user): bool
+    {
+        if ($user->created_by === $actor->id) {
+            return true;
+        }
+
+        return $user->assignedOutlets()->where('owner_id', $actor->id)->exists();
+    }
+
+    private function resolveManagedUser(User $user): User
+    {
+        $actor = Auth::user();
+
+        if ($actor->role !== 'admin' && !$this->ownsUser($actor, $user)) {
+            abort(403, 'Akses ditolak.');
+        }
+
+        return $user;
+    }
+
     // Role yang boleh dibuat oleh owner (tidak boleh buat admin/owner lain)
     private function allowedRoles(): array
     {
@@ -41,9 +63,16 @@ class UserController extends Controller
     {
         $this->authorizeManager();
 
-        $users = User::when(Auth::user()->role !== 'admin', function ($q) {
-                // Owner hanya lihat user non-admin dan non-owner
-                $q->whereHas('roleRelation', fn($r) => $r->whereNotIn('slug', ['admin', 'owner']));
+        $owner = Auth::user();
+
+        $users = User::when($owner->role !== 'admin', function ($q) use ($owner) {
+                // Owner hanya lihat user non-admin/non-owner yang dia buat sendiri
+                // atau yang sudah ditugaskan ke salah satu outlet miliknya.
+                $q->whereHas('roleRelation', fn($r) => $r->whereNotIn('slug', ['admin', 'owner']))
+                  ->where(function ($q2) use ($owner) {
+                      $q2->where('created_by', $owner->id)
+                         ->orWhereHas('assignedOutlets', fn($r) => $r->where('owner_id', $owner->id));
+                  });
             })
             ->orderByDesc('created_at')
             ->paginate(20);
@@ -77,10 +106,11 @@ class UserController extends Controller
         ]);
 
         $user = User::create([
-            'name'     => $validated['name'],
-            'email'    => $validated['email'],
-            'role'     => $validated['role'],
-            'password' => Hash::make($validated['password']),
+            'name'       => $validated['name'],
+            'email'      => $validated['email'],
+            'role'       => $validated['role'],
+            'password'   => Hash::make($validated['password']),
+            'created_by' => Auth::id(),
         ]);
 
         // Semua user yang dibuat admin → email otomatis terverifikasi (bukan self-register)
@@ -99,6 +129,8 @@ class UserController extends Controller
             abort(403, 'Akses ditolak.');
         }
 
+        $this->resolveManagedUser($user);
+
         return view('users.edit', [
             'user'         => $user,
             'allowedRoles' => $this->allowedRoles(),
@@ -112,6 +144,8 @@ class UserController extends Controller
         if (Auth::user()->role !== 'admin' && in_array($user->role, ['admin', 'owner'])) {
             abort(403, 'Akses ditolak.');
         }
+
+        $this->resolveManagedUser($user);
 
         $rules = [
             'name'  => ['required', 'string', 'max:255'],
@@ -147,6 +181,8 @@ class UserController extends Controller
         if (Auth::user()->role !== 'admin' && in_array($user->role, ['admin', 'owner'])) {
             abort(403, 'Akses ditolak.');
         }
+
+        $this->resolveManagedUser($user);
 
         $name = $user->name;
 

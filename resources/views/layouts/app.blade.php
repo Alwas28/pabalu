@@ -521,6 +521,18 @@ select.f-input option{background:var(--surface2);color:var(--text)}
        class="nav-item {{ request()->routeIs('partners.*') ? 'nav-active' : 'nav-inactive' }}">
       <i class="fa-solid fa-handshake" style="width:15px;text-align:center;font-size:13px"></i>Mitra UMKM
     </a>
+    <a href="{{ route('settings.index') }}"
+       class="nav-item {{ request()->routeIs('settings.*') ? 'nav-active' : 'nav-inactive' }}">
+      <i class="fa-solid fa-sliders" style="width:15px;text-align:center;font-size:13px"></i>Pengaturan Homepage
+    </a>
+    <a href="{{ route('system-settings.edit') }}"
+       class="nav-item {{ request()->routeIs('system-settings.*') ? 'nav-active' : 'nav-inactive' }}">
+      <i class="fa-solid fa-earth-asia" style="width:15px;text-align:center;font-size:13px"></i>Pengaturan Sistem
+    </a>
+    <a href="{{ route('pages.index') }}"
+       class="nav-item {{ request()->routeIs('pages.*') ? 'nav-active' : 'nav-inactive' }}">
+      <i class="fa-solid fa-file-lines" style="width:15px;text-align:center;font-size:13px"></i>Halaman
+    </a>
     <a href="{{ route('owners.index') }}"
        class="nav-item {{ request()->routeIs('owners.*') ? 'nav-active' : 'nav-inactive' }}">
       <i class="fa-solid fa-users" style="width:15px;text-align:center;font-size:13px"></i>Daftar Owner

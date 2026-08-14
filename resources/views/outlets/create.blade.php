@@ -69,7 +69,12 @@
 .ss-option.selected{color:var(--ac);background:var(--ac-lt);font-weight:600}
 .ss-empty{padding:14px 13px;font-size:12px;color:var(--muted);text-align:center}
 .ss-disabled .ss-input{opacity:.5;pointer-events:none}
+
+/* ── Map ── */
+.leaflet-pane,.leaflet-control{z-index:5}
 </style>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 
 <div style="max-width:680px;margin:0 auto">
 
@@ -128,7 +133,9 @@
               class="type-card {{ old('outlet_type_id') == $type->id ? 'selected' : '' }}"
               data-id="{{ $type->id }}"
               data-prefix="{{ $type->route_prefix }}"
-              data-opening="{{ $type->requires_opening_stock ? '1' : '0' }}"
+              data-opening="{{ $type->default_enable_opening_shift ? '1' : '0' }}"
+              data-order-mode="{{ $type->default_order_mode }}"
+              data-barcode="{{ $type->default_enable_barcode_scanner ? '1' : '0' }}"
               onclick="pickType(this)">
               <div class="tc-icon"><i class="fa-solid {{ $type->icon }}"></i></div>
               <div class="tc-name">{{ $type->name }}</div>
@@ -239,6 +246,20 @@
                 placeholder="Nama desa atau kelurahan"
                 value="{{ old('kelurahan') }}">
             </div>
+          </div>
+
+          {{-- Titik lokasi peta --}}
+          <div>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+              <label class="f-label" style="margin:0">Titik Lokasi di Peta <span style="font-weight:400;color:var(--muted)">(opsional)</span></label>
+              <button type="button" class="btn-back" style="padding:6px 12px;font-size:11.5px" onclick="useMyLocation()">
+                <i class="fa-solid fa-location-crosshairs"></i> Lokasi Saya
+              </button>
+            </div>
+            <div style="font-size:11.5px;color:var(--muted);margin-bottom:8px">Geser pin, atau klik peta, untuk menandai lokasi outlet.</div>
+            <div id="outlet-map" style="height:260px;border-radius:12px;overflow:hidden;border:1px solid var(--border)"></div>
+            <input type="hidden" name="latitude" id="latitude" value="{{ old('latitude') }}">
+            <input type="hidden" name="longitude" id="longitude" value="{{ old('longitude') }}">
           </div>
 
         </div>
@@ -645,6 +666,53 @@ function goStep(n) {
   currentStep = n;
   updateWizard();
   window.scrollTo({ top: 0, behavior: 'smooth' });
+  if (n === 1 && outletMap) setTimeout(() => outletMap.invalidateSize(), 50);
+}
+
+// ── Peta lokasi outlet (Leaflet + OpenStreetMap) ─────────
+let outletMap, outletMarker;
+const DEFAULT_MAP_CENTER = [-3.9985, 122.5127]; // Kendari
+
+function initOutletMap() {
+  const latInput = document.getElementById('latitude');
+  const lngInput = document.getElementById('longitude');
+  const oldLat = parseFloat(latInput.value);
+  const oldLng = parseFloat(lngInput.value);
+  const hasOld = !isNaN(oldLat) && !isNaN(oldLng);
+  const start  = hasOld ? [oldLat, oldLng] : DEFAULT_MAP_CENTER;
+
+  outletMap = L.map('outlet-map').setView(start, hasOld ? 16 : 12);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    maxZoom: 19,
+  }).addTo(outletMap);
+
+  outletMarker = L.marker(start, { draggable: true }).addTo(outletMap);
+  outletMarker.on('dragend', () => syncLatLng(outletMarker.getLatLng()));
+  outletMap.on('click', e => {
+    outletMarker.setLatLng(e.latlng);
+    syncLatLng(e.latlng);
+  });
+
+  if (hasOld) syncLatLng({ lat: oldLat, lng: oldLng });
+}
+
+function syncLatLng(latlng) {
+  document.getElementById('latitude').value  = latlng.lat.toFixed(7);
+  document.getElementById('longitude').value = latlng.lng.toFixed(7);
+}
+
+function useMyLocation() {
+  if (!navigator.geolocation) { alert('Browser tidak mendukung geolokasi.'); return; }
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      const latlng = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      outletMap.setView(latlng, 16);
+      outletMarker.setLatLng(latlng);
+      syncLatLng(latlng);
+    },
+    () => alert('Gagal mengambil lokasi. Pastikan izin lokasi diaktifkan di browser.')
+  );
 }
 
 function updateWizard() {
@@ -702,9 +770,11 @@ function pickType(el) {
   document.querySelectorAll('.type-card').forEach(c => c.classList.remove('selected'));
   el.classList.add('selected');
 
-  const id      = el.dataset.id;
-  const prefix  = el.dataset.prefix;
-  const opening = el.dataset.opening === '1';
+  const id        = el.dataset.id;
+  const prefix    = el.dataset.prefix;
+  const opening   = el.dataset.opening === '1';
+  const orderMode = el.dataset.orderMode || 'quick';
+  const barcode   = el.dataset.barcode === '1';
 
   document.getElementById('outlet_type_id').value = id;
   document.getElementById('err-type').style.display = 'none';
@@ -724,8 +794,14 @@ function pickType(el) {
   document.getElementById('retail-mode-section').style.display = !isFnb ? '' : 'none';
   document.getElementById('no-type-section').style.display     = 'none';
 
-  // Auto-set opening shift berdasarkan tipe
+  // Terapkan default dari Jenis Outlet (bisa diubah lagi manual oleh pengguna)
+  if (isFnb) {
+    const radio = document.querySelector(`input[name="order_mode"][value="${orderMode}"]`);
+    if (radio) radio.checked = true;
+    highlightMode(orderMode);
+  }
   document.getElementById('sw-opening').checked = opening;
+  document.getElementById('sw-barcode').checked = barcode;
 }
 
 // ── Bidang usaha chip picker ─────────────────────────────
@@ -750,6 +826,8 @@ function highlightMode(mode) {
 
 // ── Init ─────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
+  initOutletMap();
+
   const typeId = document.getElementById('outlet_type_id').value;
   if (typeId) {
     const el = document.querySelector(`.type-card[data-id="${typeId}"]`);

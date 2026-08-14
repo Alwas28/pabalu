@@ -14,13 +14,14 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Laravel\Sanctum\HasApiTokens;
 
-#[Fillable(['name', 'email', 'password', 'role', 'role_id', 'is_active', 'phone', 'business_name', 'setup_completed_at'])]
+#[Fillable(['name', 'email', 'password', 'role', 'role_id', 'is_active', 'phone', 'business_name', 'setup_completed_at', 'created_by'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable implements MustVerifyEmail
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable;
+    use HasApiTokens, HasFactory, Notifiable;
 
     // Always eager-load role so $user->role is zero extra queries
     protected $with = ['roleRelation'];

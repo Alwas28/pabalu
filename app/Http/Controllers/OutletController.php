@@ -81,6 +81,8 @@ class OutletController extends Controller
             'regency_id'             => ['nullable', 'exists:regencies,id'],
             'district_id'            => ['nullable', 'exists:districts,id'],
             'kelurahan'              => ['nullable', 'string', 'max:100'],
+            'latitude'               => ['nullable', 'numeric', 'between:-90,90'],
+            'longitude'              => ['nullable', 'numeric', 'between:-180,180'],
         ]);
 
         $data['owner_id']  = $user->id;
@@ -115,6 +117,8 @@ class OutletController extends Controller
             'regency_id'     => ['nullable', 'exists:regencies,id'],
             'district_id'    => ['nullable', 'exists:districts,id'],
             'kelurahan'      => ['nullable', 'string', 'max:100'],
+            'latitude'       => ['nullable', 'numeric', 'between:-90,90'],
+            'longitude'      => ['nullable', 'numeric', 'between:-180,180'],
         ]);
 
         $outlet->update($data);

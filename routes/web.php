@@ -7,6 +7,7 @@ use App\Http\Controllers\Salon;
 use App\Http\Controllers\Sewa;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\OutletController;
+use App\Http\Controllers\OutletTypeCategoryController;
 use App\Http\Controllers\OutletTypeController;
 use App\Http\Controllers\PartnerController;
 use App\Http\Controllers\ProfileController;
@@ -48,13 +49,46 @@ Route::get('/', function () {
         ->take(8)
         ->get();
 
-    return view('welcome', compact('partners', 'outletTypes', 'featuredProducts', 'registeredOutlets'));
+    $sliders = \App\Models\HomeSlider::where('is_active', true)
+        ->orderBy('sort_order')
+        ->orderBy('id')
+        ->get();
+
+    $featuredCategories = \App\Models\Category::where('is_active', true)
+        ->where('is_featured', true)
+        ->orderBy('sort_order')
+        ->orderBy('name')
+        ->get();
+
+    $featuredCategoryProducts = \App\Models\Product::where('is_active', true)
+        ->whereIn('category_id', $featuredCategories->pluck('id'))
+        ->whereHas('outlet', fn ($q) => $q->where('is_active', true))
+        ->with('outlet.outletType', 'category')
+        ->orderBy('name')
+        ->limit(10)
+        ->get();
+
+    return view('welcome', compact('partners', 'outletTypes', 'featuredProducts', 'registeredOutlets', 'sliders', 'featuredCategories', 'featuredCategoryProducts'));
 });
+
+// ── Halaman statis (CMS pages, publik) ──────────────────────────────────────
+Route::get('/halaman/{slug}', [\App\Http\Controllers\PageController::class, 'show'])->name('pages.show');
+
+// ── Pencarian produk & outlet (publik) ──────────────────────────────────────
+Route::get('/pencarian', [\App\Http\Controllers\Public\SearchController::class, 'index'])->name('search.index');
+
+// ── Kategori homepage (publik) — produk dari semua kategori yang tergabung ──
+Route::get('/kategori/{homeCategory}', [\App\Http\Controllers\Public\HomeCategoryController::class, 'show'])->name('home-categories.show');
+
+// ── Kategori produk tunggal (publik) — dipakai kartu "Kategori Pilihan" ─────
+Route::get('/produk/kategori/{category}', [\App\Http\Controllers\Public\CategoryController::class, 'show'])->name('product-categories.show');
 
 // ── Public self-ordering F&B (no auth) ─────────────────────────────────────
 Route::get('/menu/{code}', [\App\Http\Controllers\Public\MenuController::class, 'index'])->name('public.menu');
 Route::post('/menu/{code}/order', [\App\Http\Controllers\Public\MenuController::class, 'placeOrder'])->name('public.menu.order');
-Route::get('/menu/{code}/pesanan/{orderNumber}', [\App\Http\Controllers\Public\MenuController::class, 'track'])->name('public.menu.track');
+Route::get('/menu/{code}/pesanan/{token}', [\App\Http\Controllers\Public\MenuController::class, 'track'])
+    ->middleware('throttle:20,1')
+    ->name('public.menu.track');
 
 // ── Public katalog produk Retail (no auth, read-only) ──────────────────────
 Route::get('/katalog/{code}', [\App\Http\Controllers\Public\CatalogController::class, 'index'])->name('public.katalog');
@@ -81,11 +115,7 @@ $fnbRoutes = function () {
     Route::patch('{outlet}/shifts/{shift}',              [Fnb\ShiftController::class, 'update'])->name('shifts.update');
     Route::delete('{outlet}/shifts/{shift}',             [Fnb\ShiftController::class, 'destroy'])->name('shifts.destroy');
 
-    Route::get('{outlet}/categories',                              [Fnb\CategoryController::class, 'index'])->name('categories.index');
-    Route::post('{outlet}/categories',                             [Fnb\CategoryController::class, 'store'])->name('categories.store');
-    Route::match(['put','patch'],'{outlet}/categories/{category}', [Fnb\CategoryController::class, 'update'])->name('categories.update');
-    Route::delete('{outlet}/categories/{category}',                [Fnb\CategoryController::class, 'destroy'])->name('categories.destroy');
-    Route::post('{outlet}/categories/{category}/toggle-active',    [Fnb\CategoryController::class, 'toggleActive'])->name('categories.toggle-active');
+    Route::get('{outlet}/categories', [Fnb\CategoryController::class, 'index'])->name('categories.index');
 
     Route::get('{outlet}/products',                              [Fnb\ProductController::class, 'index'])->name('products.index');
     Route::post('{outlet}/products',                             [Fnb\ProductController::class, 'store'])->name('products.store');
@@ -171,11 +201,7 @@ $salonRoutes = function () {
     Route::patch('{outlet}/shifts/{shift}',        [Salon\ShiftController::class, 'update'])->name('shifts.update');
     Route::delete('{outlet}/shifts/{shift}',       [Salon\ShiftController::class, 'destroy'])->name('shifts.destroy');
 
-    Route::get('{outlet}/categories',                              [Salon\CategoryController::class, 'index'])->name('categories.index');
-    Route::post('{outlet}/categories',                             [Salon\CategoryController::class, 'store'])->name('categories.store');
-    Route::match(['put','patch'],'{outlet}/categories/{category}', [Salon\CategoryController::class, 'update'])->name('categories.update');
-    Route::delete('{outlet}/categories/{category}',                [Salon\CategoryController::class, 'destroy'])->name('categories.destroy');
-    Route::post('{outlet}/categories/{category}/toggle-active',    [Salon\CategoryController::class, 'toggleActive'])->name('categories.toggle-active');
+    Route::get('{outlet}/categories', [Salon\CategoryController::class, 'index'])->name('categories.index');
 
     Route::get('{outlet}/products',                             [Salon\ProductController::class, 'index'])->name('products.index');
     Route::post('{outlet}/products',                            [Salon\ProductController::class, 'store'])->name('products.store');
@@ -237,11 +263,7 @@ $laundryRoutes = function () {
     Route::patch('{outlet}/shifts/{shift}',        [Laundry\ShiftController::class, 'update'])->name('shifts.update');
     Route::delete('{outlet}/shifts/{shift}',       [Laundry\ShiftController::class, 'destroy'])->name('shifts.destroy');
 
-    Route::get('{outlet}/categories',                              [Laundry\CategoryController::class, 'index'])->name('categories.index');
-    Route::post('{outlet}/categories',                             [Laundry\CategoryController::class, 'store'])->name('categories.store');
-    Route::match(['put','patch'],'{outlet}/categories/{category}', [Laundry\CategoryController::class, 'update'])->name('categories.update');
-    Route::delete('{outlet}/categories/{category}',                [Laundry\CategoryController::class, 'destroy'])->name('categories.destroy');
-    Route::post('{outlet}/categories/{category}/toggle-active',    [Laundry\CategoryController::class, 'toggleActive'])->name('categories.toggle-active');
+    Route::get('{outlet}/categories', [Laundry\CategoryController::class, 'index'])->name('categories.index');
 
     Route::get('{outlet}/products',                             [Laundry\ProductController::class, 'index'])->name('products.index');
     Route::post('{outlet}/products',                            [Laundry\ProductController::class, 'store'])->name('products.store');
@@ -301,6 +323,105 @@ $laundryRoutes = function () {
     Route::delete('{outlet}/laundry-orders/{laundryOrder}',       [Laundry\LaundryOrderController::class, 'destroy'])->name('laundry-orders.destroy');
 };
 
+// ── Sewa — jasa rental (prefix: sewa/)
+// Struktur menu sesuai flow rental: Pelanggan → Verifikasi Dokumen → Booking/Sewa →
+// Serah Terima → Pengembalian → Pemeriksaan → Deposit/Denda → Selesai.
+// Semua rute di bawah masih berupa placeholder "sedang dikembangkan" (ComingSoonController)
+// kecuali dashboard (DashboardController) — akan dibangun satu per satu.
+$sewaRoutes = function () {
+    $stub = Sewa\ComingSoonController::class;
+
+    // Pelanggan
+    Route::get('{outlet}/customers',               [Sewa\CustomerController::class, 'index'])->name('customers.index');
+    Route::get('{outlet}/customers/create',        [Sewa\CustomerController::class, 'create'])->name('customers.create');
+    Route::post('{outlet}/customers',              [Sewa\CustomerController::class, 'store'])->name('customers.store');
+    Route::post('{outlet}/customers/quick',        [Sewa\CustomerController::class, 'quickStore'])->name('customers.quick-store');
+    Route::get('{outlet}/customers/{customer}',    [Sewa\CustomerController::class, 'show'])->name('customers.show');
+    Route::patch('{outlet}/customers/{customer}',  [Sewa\CustomerController::class, 'update'])->name('customers.update');
+    Route::delete('{outlet}/customers/{customer}', [Sewa\CustomerController::class, 'destroy'])->name('customers.destroy');
+
+    Route::post('{outlet}/customers/{customer}/documents',                    [Sewa\DocumentController::class, 'upload'])->name('customers.documents.upload');
+    Route::patch('{outlet}/customers/{customer}/documents/{document}/verify', [Sewa\DocumentController::class, 'verify'])->name('customers.documents.verify');
+    Route::patch('{outlet}/customers/{customer}/documents/{document}/reject', [Sewa\DocumentController::class, 'reject'])->name('customers.documents.reject');
+    Route::delete('{outlet}/customers/{customer}/documents/{document}',       [Sewa\DocumentController::class, 'destroy'])->name('customers.documents.destroy');
+
+    Route::get('{outlet}/documents', [Sewa\DocumentController::class, 'index'])->name('documents.index');
+
+    // Booking
+    Route::get('{outlet}/bookings/create', [$stub, 'show'])->name('bookings.create');
+    Route::get('{outlet}/bookings/active', [$stub, 'show'])->name('bookings.active');
+    Route::get('{outlet}/calendar',        [$stub, 'show'])->name('calendar.index');
+    Route::get('{outlet}/bookings/done',   [$stub, 'show'])->name('bookings.done');
+
+    // Sewa
+    Route::get('{outlet}/rentals/create',  [Sewa\RentalController::class, 'create'])->name('rentals.create');
+    Route::post('{outlet}/rentals',        [Sewa\RentalController::class, 'store'])->name('rentals.store');
+    Route::get('{outlet}/rentals/active',  [Sewa\RentalController::class, 'active'])->name('rentals.active');
+    Route::get('{outlet}/rentals/extend',  [Sewa\RentalController::class, 'extend'])->name('rentals.extend');
+    Route::post('{outlet}/rentals/{rental}/extend', [Sewa\RentalController::class, 'storeExtension'])->name('rentals.extend.store');
+    Route::get('{outlet}/rentals/returns', [Sewa\RentalController::class, 'returns'])->name('rentals.returns');
+    Route::post('{outlet}/rentals/{rental}/return', [Sewa\RentalController::class, 'processReturn'])->name('rentals.returns.process');
+    Route::post('{outlet}/rentals/{rental}/pay', [Sewa\RentalController::class, 'storePayment'])->name('rentals.pay');
+    Route::get('{outlet}/rentals/{rental}/receipt', [Sewa\RentalController::class, 'receipt'])->name('rentals.receipt');
+    Route::get('{outlet}/rentals/{rental}/edit', [Sewa\RentalController::class, 'edit'])->name('rentals.edit');
+    Route::put('{outlet}/rentals/{rental}', [Sewa\RentalController::class, 'updateRental'])->name('rentals.update');
+    Route::get('{outlet}/rentals/{rental}', [Sewa\RentalController::class, 'show'])->name('rentals.show');
+
+    // Barang
+    Route::get('{outlet}/items',                    [Sewa\ItemController::class, 'index'])->name('items.index');
+    Route::post('{outlet}/items',                   [Sewa\ItemController::class, 'store'])->name('items.store');
+    Route::put('{outlet}/items/{item}',              [Sewa\ItemController::class, 'update'])->name('items.update');
+    Route::delete('{outlet}/items/{item}',           [Sewa\ItemController::class, 'destroy'])->name('items.destroy');
+    Route::post('{outlet}/items/{item}/toggle-active',[Sewa\ItemController::class, 'toggleActive'])->name('items.toggle-active');
+    Route::get('{outlet}/units',            [Sewa\UnitController::class, 'index'])->name('units.index');
+    Route::post('{outlet}/units',           [Sewa\UnitController::class, 'store'])->name('units.store');
+    Route::put('{outlet}/units/{unit}',     [Sewa\UnitController::class, 'update'])->name('units.update');
+    Route::delete('{outlet}/units/{unit}',  [Sewa\UnitController::class, 'destroy'])->name('units.destroy');
+    Route::get('{outlet}/availability',                 [Sewa\AvailabilityController::class, 'index'])->name('availability.index');
+    Route::patch('{outlet}/availability/{unit}/status', [Sewa\AvailabilityController::class, 'updateStatus'])->name('availability.update-status');
+
+    Route::get('{outlet}/maintenance',                       [Sewa\MaintenanceController::class, 'index'])->name('maintenance.index');
+    Route::post('{outlet}/maintenance',                      [Sewa\MaintenanceController::class, 'store'])->name('maintenance.store');
+    Route::put('{outlet}/maintenance/{maintenance}',         [Sewa\MaintenanceController::class, 'update'])->name('maintenance.update');
+    Route::patch('{outlet}/maintenance/{maintenance}/finish',[Sewa\MaintenanceController::class, 'finish'])->name('maintenance.finish');
+    Route::delete('{outlet}/maintenance/{maintenance}',      [Sewa\MaintenanceController::class, 'destroy'])->name('maintenance.destroy');
+
+    // Transaksi
+    Route::get('{outlet}/payments', [Sewa\PaymentController::class, 'index'])->name('payments.index');
+    Route::get('{outlet}/payments/{payment}', [Sewa\PaymentController::class, 'show'])->name('payments.show');
+    Route::get('{outlet}/deposits', [Sewa\DepositController::class, 'index'])->name('deposits.index');
+    Route::get('{outlet}/fines',    [Sewa\FineController::class, 'index'])->name('fines.index');
+    Route::post('{outlet}/fines/{rental}/pay', [Sewa\FineController::class, 'pay'])->name('fines.pay');
+    Route::get('{outlet}/refunds',  [Sewa\RefundController::class, 'index'])->name('refunds.index');
+    Route::post('{outlet}/refunds/{rental}/mark-refunded', [Sewa\RefundController::class, 'markRefunded'])->name('refunds.mark-refunded');
+
+    // Pengeluaran
+    Route::get('{outlet}/expenses',                     [Sewa\ExpenseController::class, 'index'])->name('expenses.index');
+    Route::post('{outlet}/expenses',                    [Sewa\ExpenseController::class, 'store'])->name('expenses.store');
+    Route::patch('{outlet}/expenses/{expense}',         [Sewa\ExpenseController::class, 'update'])->name('expenses.update');
+    Route::delete('{outlet}/expenses/{expense}',        [Sewa\ExpenseController::class, 'destroy'])->name('expenses.destroy');
+    Route::post('{outlet}/expense-categories',          [Sewa\ExpenseController::class, 'storeCategory'])->name('expense-categories.store');
+    Route::delete('{outlet}/expense-categories/{slug}', [Sewa\ExpenseController::class, 'destroyCategory'])->name('expense-categories.destroy');
+
+    // Laporan
+    Route::get('{outlet}/reports/revenue',  [Sewa\RevenueReportController::class, 'index'])->name('reports.revenue');
+    Route::get('{outlet}/reports/rentals',  [Sewa\RentalReportController::class, 'index'])->name('reports.rentals');
+    Route::get('{outlet}/reports/items',    [Sewa\ItemReportController::class, 'index'])->name('reports.items');
+    Route::get('{outlet}/reports/fines',    [Sewa\FineReportController::class, 'index'])->name('reports.fines');
+    Route::get('{outlet}/reports/deposits', [Sewa\DepositReportController::class, 'index'])->name('reports.deposits');
+    Route::get('{outlet}/reports/profit-loss', [Sewa\ProfitLossController::class, 'index'])->name('reports.profit-loss');
+
+    // Lainnya
+    Route::get('{outlet}/settings',  [Sewa\SettingController::class, 'edit'])->name('settings.edit');
+    Route::patch('{outlet}/settings',[Sewa\SettingController::class, 'update'])->name('settings.update');
+
+    Route::post('{outlet}/settings/requirements',                [Sewa\SettingController::class, 'storeRequirement'])->name('settings.requirements.store');
+    Route::patch('{outlet}/settings/requirements/{requirement}', [Sewa\SettingController::class, 'updateRequirement'])->name('settings.requirements.update');
+    Route::delete('{outlet}/settings/requirements/{requirement}',[Sewa\SettingController::class, 'destroyRequirement'])->name('settings.requirements.destroy');
+    Route::patch('{outlet}/settings/payment', [Sewa\SettingController::class, 'updatePayment'])->name('settings.payment.update');
+    Route::patch('{outlet}/settings/receipt', [Sewa\SettingController::class, 'updateReceipt'])->name('settings.receipt.update');
+};
+
 // ── Retail — toko kelontong, pakaian, elektronik (prefix: retail/)
 // Manajemen harga jual (HPP). Tanpa orders/kitchen, tanpa opening/closing stok.
 $retailRoutes = function () {
@@ -313,11 +434,7 @@ $retailRoutes = function () {
     Route::patch('{outlet}/shifts/{shift}',              [Retail\ShiftController::class, 'update'])->name('shifts.update');
     Route::delete('{outlet}/shifts/{shift}',             [Retail\ShiftController::class, 'destroy'])->name('shifts.destroy');
 
-    Route::get('{outlet}/categories',                              [Retail\CategoryController::class, 'index'])->name('categories.index');
-    Route::post('{outlet}/categories',                             [Retail\CategoryController::class, 'store'])->name('categories.store');
-    Route::match(['put','patch'],'{outlet}/categories/{category}', [Retail\CategoryController::class, 'update'])->name('categories.update');
-    Route::delete('{outlet}/categories/{category}',                [Retail\CategoryController::class, 'destroy'])->name('categories.destroy');
-    Route::post('{outlet}/categories/{category}/toggle-active',    [Retail\CategoryController::class, 'toggleActive'])->name('categories.toggle-active');
+    Route::get('{outlet}/categories', [Retail\CategoryController::class, 'index'])->name('categories.index');
 
     Route::get('{outlet}/products',                              [Retail\ProductController::class, 'index'])->name('products.index');
     Route::post('{outlet}/products',                             [Retail\ProductController::class, 'store'])->name('products.store');
@@ -371,11 +488,12 @@ $retailRoutes = function () {
 };
 
 // Halaman publik (tanpa login) — cek status pesanan laundry via QR
-Route::get('/cek-pesanan/{orderNumber}', [\App\Http\Controllers\Laundry\TrackOrderController::class, 'show'])
+Route::get('/cek-pesanan/{token}', [\App\Http\Controllers\Laundry\TrackOrderController::class, 'show'])
+    ->middleware('throttle:20,1')
     ->name('laundry.track');
 
 // Rute utama
-Route::middleware(['auth', 'verified', 'require.setup'])->group(function () use ($fnbRoutes, $salonRoutes, $laundryRoutes, $retailRoutes) {
+Route::middleware(['auth', 'verified', 'require.setup'])->group(function () use ($fnbRoutes, $salonRoutes, $laundryRoutes, $retailRoutes, $sewaRoutes) {
     Route::get('/dashboard', function () {
         /** @var \App\Models\User $user */
         $user            = Auth::user();
@@ -498,12 +616,53 @@ Route::middleware(['auth', 'verified', 'require.setup'])->group(function () use 
     Route::put('employees/{employee}/account',                    [EmployeeController::class, 'updateAccount'])->name('employees.account.update');
 
     // Jenis Outlet
-    Route::resource('outlet-types', OutletTypeController::class)->except(['create', 'edit', 'show']);
+    Route::resource('outlet-types', OutletTypeController::class)->except(['create', 'edit']);
     Route::post('outlet-types/{outlet_type}/toggle-active', [OutletTypeController::class, 'toggleActive'])->name('outlet-types.toggle-active');
+
+    // Kategori per Jenis Outlet (dikelola admin, dipakai bersama oleh semua outlet jenis ini)
+    Route::post('outlet-types/{outlet_type}/categories',                              [OutletTypeCategoryController::class, 'store'])->name('outlet-types.categories.store');
+    Route::match(['put', 'patch'], 'outlet-types/{outlet_type}/categories/{category}', [OutletTypeCategoryController::class, 'update'])->name('outlet-types.categories.update');
+    Route::delete('outlet-types/{outlet_type}/categories/{category}',                  [OutletTypeCategoryController::class, 'destroy'])->name('outlet-types.categories.destroy');
+    Route::post('outlet-types/{outlet_type}/categories/{category}/toggle-active',      [OutletTypeCategoryController::class, 'toggleActive'])->name('outlet-types.categories.toggle-active');
 
     // Mitra UMKM (logo kerjasama)
     Route::resource('partners', PartnerController::class)->except(['create', 'edit', 'show']);
     Route::post('partners/{partner}/toggle-active', [PartnerController::class, 'toggleActive'])->name('partners.toggle-active');
+
+    // Halaman (CMS pages statis — Tentang Kami, Kebijakan Privasi, dll.)
+    Route::post('pages/upload-image', [\App\Http\Controllers\PageController::class, 'uploadImage'])->name('pages.upload-image');
+    Route::resource('pages', \App\Http\Controllers\PageController::class)->except(['show']);
+    Route::post('pages/{page}/toggle-active', [\App\Http\Controllers\PageController::class, 'toggleActive'])->name('pages.toggle-active');
+
+    // Pengaturan Homepage (admin only) — tab Header (slider), Menu & Kategori
+    Route::prefix('pengaturan')->name('settings.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\HomepageSettingController::class, 'index'])->name('index');
+        Route::get('header', [\App\Http\Controllers\HomepageSettingController::class, 'header'])->name('header');
+        Route::get('menu', [\App\Http\Controllers\HomepageSettingController::class, 'menu'])->name('menu');
+        Route::get('kategori', [\App\Http\Controllers\HomepageSettingController::class, 'categories'])->name('categories');
+    });
+    Route::prefix('pengaturan/header/sliders')->name('sliders.')->group(function () {
+        Route::post('/', [\App\Http\Controllers\HomeSliderController::class, 'store'])->name('store');
+        Route::match(['put', 'patch'], '{slider}', [\App\Http\Controllers\HomeSliderController::class, 'update'])->name('update');
+        Route::delete('{slider}', [\App\Http\Controllers\HomeSliderController::class, 'destroy'])->name('destroy');
+        Route::post('{slider}/toggle-active', [\App\Http\Controllers\HomeSliderController::class, 'toggleActive'])->name('toggle-active');
+    });
+    Route::prefix('pengaturan/menu/items')->name('home-menus.')->group(function () {
+        Route::post('/', [\App\Http\Controllers\HomeMenuController::class, 'store'])->name('store');
+        Route::match(['put', 'patch'], '{homeMenu}', [\App\Http\Controllers\HomeMenuController::class, 'update'])->name('update');
+        Route::delete('{homeMenu}', [\App\Http\Controllers\HomeMenuController::class, 'destroy'])->name('destroy');
+        Route::post('{homeMenu}/toggle-active', [\App\Http\Controllers\HomeMenuController::class, 'toggleActive'])->name('toggle-active');
+    });
+    Route::prefix('pengaturan/kategori/items')->name('home-categories.')->group(function () {
+        Route::post('/', [\App\Http\Controllers\HomeCategoryController::class, 'store'])->name('store');
+        Route::match(['put', 'patch'], '{homeCategory}', [\App\Http\Controllers\HomeCategoryController::class, 'update'])->name('update');
+        Route::delete('{homeCategory}', [\App\Http\Controllers\HomeCategoryController::class, 'destroy'])->name('destroy');
+        Route::post('{homeCategory}/toggle-active', [\App\Http\Controllers\HomeCategoryController::class, 'toggleActive'])->name('toggle-active');
+    });
+
+    // Pengaturan Sistem (admin only) — zona waktu aplikasi
+    Route::get('pengaturan-sistem', [\App\Http\Controllers\SystemSettingController::class, 'edit'])->name('system-settings.edit');
+    Route::put('pengaturan-sistem', [\App\Http\Controllers\SystemSettingController::class, 'update'])->name('system-settings.update');
 
     // Wilayah Indonesia (admin only)
     Route::prefix('wilayah')->name('wilayah.')->group(function () {
@@ -558,9 +717,10 @@ Route::middleware(['auth', 'verified', 'require.setup'])->group(function () use 
         $retailRoutes();
     });
 
-    // ── Sewa: jasa sewa (prefix: sewa/) — dashboard saja, fitur lain belum dibuat
-    Route::prefix('sewa')->name('sewa.')->group(function () {
+    // ── Sewa: jasa rental (prefix: sewa/)
+    Route::prefix('sewa')->name('sewa.')->group(function () use ($sewaRoutes) {
         Route::get('{outlet}', [Sewa\DashboardController::class, 'show'])->name('show');
+        $sewaRoutes();
     });
 
     // Daftar & profil owner (admin only)

@@ -132,7 +132,7 @@ class MenuController extends Controller
         if ($duplicate) {
             return response()->json([
                 'message'   => "Nama \"{$data['customer_name']}\" masih memiliki pesanan yang belum selesai. Gunakan nama lain, atau cek status pesanan sebelumnya.",
-                'track_url' => route('public.menu.track', [$code, $duplicate->order_number]),
+                'track_url' => route('public.menu.track', [$code, $duplicate->tracking_token]),
             ], 422);
         }
 
@@ -200,17 +200,17 @@ class MenuController extends Controller
 
         return response()->json([
             'order_number' => $order->order_number,
-            'track_url'    => route('public.menu.track', [$code, $order->order_number]),
+            'track_url'    => route('public.menu.track', [$code, $order->tracking_token]),
             'total'        => $order->total,
         ]);
     }
 
-    public function track(string $code, string $orderNumber): View
+    public function track(string $code, string $token): View
     {
         $outlet = Outlet::where('code', strtoupper($code))->firstOrFail();
         $order  = Order::with('items')
             ->where('outlet_id', $outlet->id)
-            ->where('order_number', $orderNumber)
+            ->where('tracking_token', $token)
             ->firstOrFail();
 
         return view('public.menu.track', compact('outlet', 'order'));

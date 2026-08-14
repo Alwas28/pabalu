@@ -121,7 +121,7 @@ h1{font-size:15px;font-weight:700;text-align:center;margin-bottom:2px}
 <hr class="divider">
 
 {{-- QR Code — mengarah ke halaman cek status publik --}}
-@php $trackUrl = route('laundry.track', $laundryOrder->order_number); @endphp
+@php $trackUrl = route('laundry.track', $laundryOrder->tracking_token); @endphp
 <div class="qr-wrap">
   {!! SimpleSoftwareIO\QrCode\Facades\QrCode::size(110)->margin(1)->generate($trackUrl) !!}
 </div>
