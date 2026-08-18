@@ -101,6 +101,23 @@
           @enderror
         </div>
 
+        {{-- Hubungkan ke Karyawan (cuma relevan untuk Kasir/Admin Outlet) --}}
+        <div id="employee-link-field" style="display:none">
+          <label class="f-label" for="employee_id">Hubungkan ke Karyawan <span style="font-weight:400;text-transform:none;font-size:11px;color:var(--muted)">(opsional)</span></label>
+          <select id="employee_id" name="employee_id" class="f-input">
+            <option value="">— Tidak dihubungkan —</option>
+            @foreach($employees as $emp)
+            <option value="{{ $emp->id }}" {{ (string) old('employee_id') === (string) $emp->id ? 'selected' : '' }}>
+              {{ $emp->name }}{{ $emp->position ? ' — ' . $emp->position : '' }}
+            </option>
+            @endforeach
+          </select>
+          <p style="font-size:11px;color:var(--muted);margin-top:5px">Cuma menampilkan karyawan yang belum punya akun login. Kalau dipilih, outlet gajian karyawan otomatis jadi akses outlet akun ini.</p>
+          @error('employee_id')
+            <p style="font-size:12px;color:#f87171;margin-top:5px"><i class="fa-solid fa-circle-exclamation"></i> {{ $message }}</p>
+          @enderror
+        </div>
+
         {{-- Password --}}
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
           <div>
@@ -164,6 +181,15 @@ function onRoleChange(input) {
   active.style.background  = 'var(--ac-lt)';
   active.querySelector('.role-icon').style.background = 'var(--ac-lt)';
   active.querySelector('.role-icon').style.color = 'var(--ac)';
+
+  // Hubungkan-ke-karyawan cuma relevan buat role operasional (kasir/admin_outlet) —
+  // employee tidak punya konsep akun admin/owner.
+  const employeeField = document.getElementById('employee-link-field');
+  const showEmployeeField = ['kasir', 'admin_outlet'].includes(input.value);
+  employeeField.style.display = showEmployeeField ? '' : 'none';
+  if (!showEmployeeField) {
+    document.getElementById('employee_id').value = '';
+  }
 }
 
 function togglePass(fieldId, iconId) {

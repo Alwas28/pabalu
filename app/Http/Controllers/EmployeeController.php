@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\EnforcesKasirLimit;
 use App\Models\Employee;
 use App\Models\EmployeeSalary;
 use App\Models\EmployeeSalaryPayment;
@@ -18,6 +19,8 @@ use Illuminate\View\View;
 
 class EmployeeController extends Controller
 {
+    use EnforcesKasirLimit;
+
     private function ownerOutlets(): \Illuminate\Database\Eloquent\Collection
     {
         /** @var User $owner */
@@ -75,31 +78,6 @@ class EmployeeController extends Controller
         }
 
         return $employee;
-    }
-
-    // Batas JUMLAH akun kasir/admin_outlet PER OUTLET (bukan total di seluruh akun
-    // owner) — dicek berdasarkan plan OWNER outlet itu sendiri (bukan user yang login,
-    // supaya konsisten kalau suatu saat admin bertindak atas nama owner). $excludeUserId
-    // dipakai saat update supaya user yang sedang diedit tidak ikut terhitung dobel
-    // untuk outlet yang memang sudah jadi miliknya.
-    private function outletKasirLimitMessage(Outlet $outlet, ?int $excludeUserId = null): ?string
-    {
-        $plan = $outlet->owner?->currentProPlan();
-        $maxKasir = $plan?->max_kasir;
-        if ($maxKasir === null) {
-            return null;
-        }
-
-        $count = $outlet->employees()
-            ->when($excludeUserId, fn ($q) => $q->where('users.id', '!=', $excludeUserId))
-            ->whereHas('roleRelation', fn ($r) => $r->whereNotIn('slug', ['admin', 'owner']))
-            ->count();
-
-        if ($count >= $maxKasir) {
-            return "Outlet \"{$outlet->name}\" sudah mencapai batas maksimal {$maxKasir} akun kasir/admin outlet sesuai paket ({$plan->name}).";
-        }
-
-        return null;
     }
 
     public function index(): View

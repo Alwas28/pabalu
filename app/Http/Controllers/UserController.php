@@ -2,18 +2,36 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\EnforcesKasirLimit;
+use App\Models\Employee;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\View\View;
 
 class UserController extends Controller
 {
+    use EnforcesKasirLimit;
+
     // Roles yang boleh mengelola user
     private const MANAGER_ROLES = ['admin', 'owner'];
+
+    // Karyawan yang boleh dihubungkan ke user baru dari sini — punya karyawan tapi
+    // belum ada akun login (user_id null), dibatasi ke karyawan milik owner yang sama
+    // (admin bebas semua), sama seperti scoping di EmployeeController::index().
+    private function unlinkedEmployees(): \Illuminate\Database\Eloquent\Collection
+    {
+        $owner = Auth::user();
+
+        return Employee::whereNull('user_id')
+            ->when($owner->role !== 'admin', fn ($q) => $q->where('owner_id', $owner->id))
+            ->orderBy('name')
+            ->get();
+    }
 
     private function authorizeManager(): void
     {
@@ -90,6 +108,7 @@ class UserController extends Controller
 
         return view('users.create', [
             'allowedRoles' => $this->allowedRoles(),
+            'employees'    => $this->unlinkedEmployees(),
         ]);
     }
 
@@ -102,20 +121,50 @@ class UserController extends Controller
     {
         $this->authorizeManager();
 
+        $unlinkedIds = $this->unlinkedEmployees()->pluck('id')->toArray();
+
         $validated = $request->validate([
-            'name'     => ['required', 'string', 'max:255'],
-            'email'    => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:users'],
-            'role'     => ['required', 'in:' . implode(',', $this->allowedRoles())],
-            'password' => ['required', 'confirmed', Password::defaults()],
+            'name'        => ['required', 'string', 'max:255'],
+            'email'       => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:users'],
+            'role'        => ['required', 'in:' . implode(',', $this->allowedRoles())],
+            'password'    => ['required', 'confirmed', Password::defaults()],
+            'employee_id' => ['nullable', 'integer', 'in:' . implode(',', $unlinkedIds ?: [0])],
+        ], [
+            'employee_id.in' => 'Karyawan tidak valid atau sudah punya akun.',
         ]);
 
-        $user = User::create([
-            'name'       => $validated['name'],
-            'email'      => $validated['email'],
-            'role'       => $validated['role'],
-            'password'   => Hash::make($validated['password']),
-            'created_by' => Auth::id(),
-        ]);
+        // Menghubungkan ke karyawan cuma masuk akal untuk role operasional (kasir/admin_outlet)
+        // — sama seperti batasan role di EmployeeController::createAccount().
+        $employee = null;
+        if (!empty($validated['employee_id']) && in_array($validated['role'], ['kasir', 'admin_outlet'], true)) {
+            $employee = Employee::find($validated['employee_id']);
+
+            if ($employee->outlet_id) {
+                $outlet = $employee->outlet;
+                if ($outlet && ($message = $this->outletKasirLimitMessage($outlet))) {
+                    return back()->withErrors(['employee_id' => $message])->withInput();
+                }
+            }
+        }
+
+        $user = DB::transaction(function () use ($validated, $employee) {
+            $user = User::create([
+                'name'       => $validated['name'],
+                'email'      => $validated['email'],
+                'role'       => $validated['role'],
+                'password'   => Hash::make($validated['password']),
+                'created_by' => Auth::id(),
+            ]);
+
+            if ($employee) {
+                $employee->update(['user_id' => $user->id]);
+                if ($employee->outlet_id) {
+                    $user->assignedOutlets()->syncWithoutDetaching([$employee->outlet_id]);
+                }
+            }
+
+            return $user;
+        });
 
         // Semua user yang dibuat admin → email otomatis terverifikasi (bukan self-register)
         $user->markEmailAsVerified();

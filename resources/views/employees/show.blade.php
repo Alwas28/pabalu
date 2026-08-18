@@ -699,6 +699,7 @@
         </div>
         <div>
           <label class="f-label">Akses Outlet <span style="color:#f87171">*</span></label>
+          <p style="font-size:11px;color:var(--muted);margin:2px 0 8px">Outlet tempat karyawan digaji sudah otomatis tercentang — akun login bisa akses lebih dari satu outlet kalau perlu.</p>
           @php
             $ownerOutlets = match(auth()->user()->role) {
               'admin' => \App\Models\Outlet::orderBy('name')->get(),
@@ -711,7 +712,7 @@
               onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background='transparent'">
               <input type="checkbox" class="outlet-cb" data-outlet-id="{{ $ot->id }}"
                 style="width:16px;height:16px;accent-color:var(--ac);cursor:pointer"
-                {{ in_array($ot->id, old('outlet_ids', [])) ? 'checked' : '' }}>
+                {{ in_array($ot->id, old('outlet_ids', array_filter([$employee->outlet_id]))) ? 'checked' : '' }}>
               <div>
                 <div style="font-size:13px;font-weight:600;color:var(--text)">{{ $ot->name }}</div>
                 @if($ot->address)<div style="font-size:11px;color:var(--muted)">{{ $ot->address }}</div>@endif
