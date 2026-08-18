@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Retail;
 use App\Http\Controllers\Controller;
 
 use App\Exports\SalesReportExport;
+use App\Http\Controllers\Concerns\EnforcesProFeature;
 use App\Models\Outlet;
 use App\Models\Transaction;
 use App\Models\User;
@@ -17,6 +18,8 @@ use Maatwebsite\Excel\Facades\Excel;
 
 class SalesReportController extends Controller
 {
+    use EnforcesProFeature;
+
     private function authorizeOutlet(Outlet $outlet): User
     {
         /** @var User $user */
@@ -120,6 +123,8 @@ class SalesReportController extends Controller
             abort(403);
         }
 
+        $this->requireProFeature($outlet, $user, 'retail_laporan_jual', 'Laporan Penjualan Detail');
+
         $outlet->load('outletType');
         $data = $this->computeData($request, $outlet);
 
@@ -133,6 +138,8 @@ class SalesReportController extends Controller
         if (!$user->hasPermission('report.sales')) {
             abort(403);
         }
+
+        $this->requireProFeature($outlet, $user, 'retail_export_excel', 'Export Laporan ke Excel');
 
         $outlet->load('outletType');
         $data = $this->computeData($request, $outlet);

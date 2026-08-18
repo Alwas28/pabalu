@@ -209,8 +209,8 @@
           style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:7px 10px;font-size:12.5px;color:var(--text);outline:none;font-family:inherit">
       </div>
       <div style="display:flex;align-items:center;gap:8px">
-        <i class="fa-solid fa-utensils" style="color:var(--ac);font-size:11px;flex-shrink:0;width:14px;text-align:center"></i>
-        <input id="table-number" type="text" placeholder="No. meja (opsional)..."
+        <i class="fa-solid fa-chair" style="color:var(--ac);font-size:11px;flex-shrink:0;width:14px;text-align:center"></i>
+        <input id="table-number" type="text" placeholder="No. kursi (opsional)..."
           style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:7px 10px;font-size:12.5px;color:var(--text);outline:none;font-family:inherit">
       </div>
     </div>
@@ -266,8 +266,8 @@
     <button id="pay-btn" onclick="sendToKitchen()" disabled
       style="width:100%;padding:14px;border-radius:12px;border:none;background:linear-gradient(135deg,#f59e0b,#f97316);color:#fff;font-size:15px;font-weight:800;cursor:pointer;transition:opacity .15s;opacity:.5;font-family:'Clash Display',sans-serif;letter-spacing:.3px"
       onmouseover="if(!this.disabled)this.style.opacity='.88'" onmouseout="this.style.opacity=this.disabled?'.5':'1'">
-      <i class="fa-solid fa-fire-burner" style="margin-right:8px;font-size:13px"></i>
-      KIRIM KE DAPUR
+      <i class="fa-solid fa-hourglass-half" style="margin-right:8px;font-size:13px"></i>
+      KIRIM KE ANTRIAN
     </button>
     @else
     <button id="pay-btn" onclick="openPayment()" disabled
@@ -475,9 +475,9 @@
   <div class="modal-box" style="max-width:400px">
     <div style="padding:24px 24px 16px;text-align:center;border-bottom:1px solid var(--border)">
       <div style="width:60px;height:60px;border-radius:18px;background:rgba(245,158,11,.15);display:grid;place-items:center;margin:0 auto 14px;font-size:26px;color:#f59e0b">
-        <i class="fa-solid fa-fire-burner"></i>
+        <i class="fa-solid fa-hourglass-half"></i>
       </div>
-      <h3 class="font-display" style="font-size:18px;font-weight:700;color:var(--text)">Order Dikirim ke Dapur!</h3>
+      <h3 class="font-display" style="font-size:18px;font-weight:700;color:var(--text)">Pesanan Masuk Antrian!</h3>
       <p id="ok-order-number" style="font-size:12.5px;color:var(--muted);margin-top:5px;font-family:monospace"></p>
     </div>
     <div style="padding:16px 22px">
@@ -491,7 +491,7 @@
           <span id="ok-customer" style="font-weight:700;color:var(--text)"></span>
         </div>
         <div style="display:flex;justify-content:space-between;font-size:13px">
-          <span style="color:var(--muted)">No. Meja</span>
+          <span style="color:var(--muted)">No. Kursi</span>
           <span id="ok-table" style="font-weight:700;color:var(--text)"></span>
         </div>
         <div style="display:flex;justify-content:space-between;font-size:13px">
@@ -500,7 +500,7 @@
         </div>
       </div>
       <p style="font-size:12px;color:var(--muted);text-align:center;margin-top:12px;line-height:1.6">
-        Struk dapur otomatis dibuka. Pantau di <strong style="color:var(--text)">Antrian Order</strong>.
+        Struk otomatis dibuka. Pantau di <strong style="color:var(--text)">Antrian Order</strong>.
       </p>
     </div>
     <div style="padding:12px 22px 18px;display:flex;gap:10px">
@@ -523,7 +523,7 @@
   style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);backdrop-filter:blur(4px);z-index:200;display:none;align-items:center;justify-content:center">
   <div style="background:var(--surface);border-radius:16px;padding:28px 36px;text-align:center;border:1px solid var(--border)">
     <i class="fa-solid fa-spinner fa-spin" style="font-size:28px;color:var(--ac);display:block;margin-bottom:12px"></i>
-    <div id="loading-text" style="font-size:14px;color:var(--text);font-weight:600">{{ $isKitchen ? 'Mengirim ke Dapur...' : 'Memproses Transaksi...' }}</div>
+    <div id="loading-text" style="font-size:14px;color:var(--text);font-weight:600">{{ $isKitchen ? 'Mengirim ke Antrian...' : 'Memproses Transaksi...' }}</div>
   </div>
 </div>
 

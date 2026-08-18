@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Retail;
 
 use App\Http\Controllers\Controller;
 
+use App\Http\Controllers\Concerns\EnforcesProFeature;
 use App\Models\Outlet;
 use App\Models\StockIn;
 use App\Models\User;
@@ -15,6 +16,11 @@ use Illuminate\View\View;
 
 class StockInController extends Controller
 {
+    use EnforcesProFeature;
+
+    private const FEATURE_SLUG  = 'retail_manajemen_stok';
+    private const FEATURE_LABEL = 'Manajemen Stok Masuk';
+
     private function authorizeOutlet(Outlet $outlet): User
     {
         /** @var User $user */
@@ -34,6 +40,8 @@ class StockInController extends Controller
         if (!$user->hasPermission('stock.in')) {
             abort(403);
         }
+
+        $this->requireProFeature($outlet, $user, self::FEATURE_SLUG, self::FEATURE_LABEL);
 
         $outlet->load('outletType');
 
@@ -74,6 +82,8 @@ class StockInController extends Controller
             abort(403);
         }
 
+        $this->requireProFeature($outlet, $user, self::FEATURE_SLUG, self::FEATURE_LABEL);
+
         $outlet->load('outletType');
 
         $products = $outlet->products()
@@ -94,6 +104,8 @@ class StockInController extends Controller
         if (!$user->hasPermission('stock.in')) {
             abort(403);
         }
+
+        $this->requireProFeature($outlet, $user, self::FEATURE_SLUG, self::FEATURE_LABEL);
 
         $request->validate([
             'date'              => ['required', 'date'],
@@ -153,6 +165,8 @@ class StockInController extends Controller
             abort(404);
         }
 
+        $this->requireProFeature($outlet, $user, self::FEATURE_SLUG, self::FEATURE_LABEL);
+
         $stockIn->load(['user', 'items.product.category']);
 
         return view('retail.stock-in.show', compact('outlet', 'user', 'stockIn'));
@@ -169,6 +183,8 @@ class StockInController extends Controller
         if ($stockIn->outlet_id != $outlet->id) {
             abort(404);
         }
+
+        $this->requireProFeature($outlet, $user, self::FEATURE_SLUG, self::FEATURE_LABEL);
 
         $outlet->load('outletType');
         $stockIn->load('items');
@@ -198,6 +214,8 @@ class StockInController extends Controller
         if ($stockIn->outlet_id != $outlet->id) {
             abort(404);
         }
+
+        $this->requireProFeature($outlet, $user, self::FEATURE_SLUG, self::FEATURE_LABEL);
 
         $request->validate([
             'date'              => ['required', 'date'],
@@ -266,6 +284,8 @@ class StockInController extends Controller
         if ($stockIn->outlet_id != $outlet->id) {
             abort(404);
         }
+
+        $this->requireProFeature($outlet, $user, self::FEATURE_SLUG, self::FEATURE_LABEL);
 
         $stockIn->load('items');
 

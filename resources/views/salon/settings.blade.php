@@ -43,7 +43,7 @@
         <div>
           <div style="font-size:13.5px;font-weight:700;color:var(--text)">Quick Pay</div>
           <div style="font-size:12px;color:var(--muted);margin-top:3px;line-height:1.5">
-            Pelanggan langsung bayar di kasir. Cocok untuk warung, kafe.
+            Pelanggan langsung bayar di kasir setelah dilayani. Cocok untuk potong rambut, cukur cepat.
           </div>
         </div>
       </label>
@@ -55,9 +55,9 @@
           style="accent-color:var(--ac);margin-top:2px;flex-shrink:0"
           onchange="highlightMode('kitchen')">
         <div>
-          <div style="font-size:13.5px;font-weight:700;color:var(--text)">Kitchen Order</div>
+          <div style="font-size:13.5px;font-weight:700;color:var(--text)">Antrian Layanan</div>
           <div style="font-size:12px;color:var(--muted);margin-top:3px;line-height:1.5">
-            Pesanan dikirim ke dapur dulu, bayar setelah selesai.
+            Pesanan masuk antrian dulu, bayar setelah layanan selesai.
           </div>
         </div>
       </label>

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Api\V1\Concerns\AuthorizesOutlet;
+use App\Http\Controllers\Concerns\EnforcesProFeature;
 use App\Http\Controllers\Concerns\RequiresActiveShift;
 use App\Http\Controllers\Concerns\ResolvesBusinessDate;
 use App\Http\Controllers\Controller;
@@ -22,7 +23,7 @@ use Illuminate\Support\Facades\DB;
 // lihat Api\V1\LaundryController untuk Laundry.
 class PosController extends Controller
 {
-    use AuthorizesOutlet, RequiresActiveShift, ResolvesBusinessDate;
+    use AuthorizesOutlet, EnforcesProFeature, RequiresActiveShift, ResolvesBusinessDate;
 
     private const SUPPORTED_PREFIXES = ['fnb', 'retail', 'salon'];
 
@@ -32,6 +33,15 @@ class PosController extends Controller
 
         if (!in_array($outlet->rp(), self::SUPPORTED_PREFIXES, true) || $outlet->order_mode === 'kitchen') {
             abort(501, 'Jenis outlet atau mode order ini belum didukung API mobile.');
+        }
+    }
+
+    // Cuma Retail yang sudah punya fitur "Akses Aplikasi Kasir Mobile" di katalog Pro
+    // (retail_akses_mobile) — Fnb/Salon belum digate di sini, menyusul terpisah.
+    private function ensureMobileEntitled(Outlet $outlet, User $user): void
+    {
+        if ($outlet->rp() === 'retail') {
+            $this->requireProFeature($outlet, $user, 'retail_akses_mobile', 'Akses Aplikasi Kasir Mobile');
         }
     }
 
@@ -60,8 +70,9 @@ class PosController extends Controller
 
     public function categories(Request $request, Outlet $outlet): JsonResponse
     {
-        $this->authorizeOutlet($request, $outlet);
+        $user = $this->authorizeOutlet($request, $outlet);
         $this->ensureSupported($outlet);
+        $this->ensureMobileEntitled($outlet, $user);
 
         $categories = $outlet->categories()
             ->where('is_active', true)
@@ -74,8 +85,9 @@ class PosController extends Controller
 
     public function products(Request $request, Outlet $outlet): JsonResponse
     {
-        $this->authorizeOutlet($request, $outlet);
+        $user = $this->authorizeOutlet($request, $outlet);
         $this->ensureSupported($outlet);
+        $this->ensureMobileEntitled($outlet, $user);
 
         $products = $outlet->products()
             ->where('is_active', true)
@@ -89,6 +101,7 @@ class PosController extends Controller
     public function index(Request $request, Outlet $outlet): JsonResponse
     {
         $user = $this->authorizeOutlet($request, $outlet);
+        $this->ensureMobileEntitled($outlet, $user);
 
         $transactions = $outlet->transactions()
             ->where('user_id', $user->id)
@@ -108,7 +121,8 @@ class PosController extends Controller
 
     public function show(Request $request, Outlet $outlet, Transaction $transaction): JsonResponse
     {
-        $this->authorizeOutlet($request, $outlet);
+        $user = $this->authorizeOutlet($request, $outlet);
+        $this->ensureMobileEntitled($outlet, $user);
 
         if ($transaction->outlet_id !== $outlet->id) {
             abort(404);
@@ -124,6 +138,7 @@ class PosController extends Controller
     {
         $user = $this->authorizeOutlet($request, $outlet);
         $this->ensureSupported($outlet);
+        $this->ensureMobileEntitled($outlet, $user);
 
         if ($this->shiftRequired($outlet, $user)) {
             return response()->json(['message' => 'Shift belum dibuka. Buka shift terlebih dahulu.'], 422);
@@ -143,6 +158,7 @@ class PosController extends Controller
             'discount_value'   => ['nullable', 'integer', 'min:0'],
             'notes'            => ['nullable', 'string', 'max:500'],
             'reference_number' => ['nullable', 'string', 'max:100'],
+            'proof_image'      => ['nullable', 'image', 'max:3072'],
         ]);
 
         $businessDate = $this->getBusinessDate($outlet);
@@ -200,6 +216,10 @@ class PosController extends Controller
             $paymentAmount = (int) $request->payment_amount;
             $changeAmount  = max(0, $paymentAmount - $total);
 
+            $proofPath = $request->hasFile('proof_image')
+                ? $request->file('proof_image')->store('payment-proofs', 'public')
+                : null;
+
             $outlet->loadMissing('outletType');
             $typeCode   = $outlet->outletType?->type_code ?? '00';
             $outletCode = $outlet->code ?? 'XXXX';
@@ -226,6 +246,7 @@ class PosController extends Controller
                 'status'             => 'completed',
                 'notes'              => $request->notes,
                 'reference_number'   => $request->input('reference_number'),
+                'proof_image'        => $proofPath,
             ]);
 
             foreach ($validated as $v) {

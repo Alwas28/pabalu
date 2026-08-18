@@ -9,6 +9,8 @@
   $isSystemAdmin = Auth::user()->role === 'admin';
   $adminContact  = $isSystemAdmin ? null : \App\Models\User::whereHas('roleRelation', fn($q) => $q->where('slug', 'admin'))->first();
   $adminWaPhone  = $adminContact?->phone ? preg_replace('/^0/', '62', preg_replace('/[^0-9]/', '', $adminContact->phone)) : null;
+  $proPlan       = $outlet->proPlan();
+  $paymentFeatureMap = ['enable_qris_transfer' => 'retail_payment_qris', 'enable_card' => 'retail_payment_card'];
 @endphp
 
 <x-outlet-menu-qr :outlet="$outlet" />
@@ -222,7 +224,12 @@
     @endphp
 
     @foreach($pmList as [$field, $slug, $label, $icon, $desc])
-    @php $isQrisPay = $field === 'enable_qris_pay'; $canToggle = !$isQrisPay || $isSystemAdmin; @endphp
+    @php
+      $isQrisPay      = $field === 'enable_qris_pay';
+      $requiredFeature = $paymentFeatureMap[$field] ?? null;
+      $lockedByPlan   = $requiredFeature && !$isSystemAdmin && !$proPlan->hasFeature($requiredFeature);
+      $canToggle      = (!$isQrisPay || $isSystemAdmin) && !$lockedByPlan;
+    @endphp
     <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 0;border-bottom:1px solid var(--border){{ !$canToggle ? ';opacity:.75' : '' }}">
       <div style="flex:1;padding-right:24px;display:flex;align-items:flex-start;gap:12px">
         <div style="width:36px;height:36px;border-radius:10px;background:var(--ac-lt);color:{{ $canToggle ? 'var(--ac)' : 'var(--muted)' }};display:grid;place-items:center;font-size:14px;flex-shrink:0;margin-top:2px">
@@ -236,6 +243,11 @@
               <i class="fa-solid fa-lock" style="font-size:9px;margin-right:2px"></i>Admin Only
             </span>
             @endif
+            @if($lockedByPlan)
+            <span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:99px;background:rgba(251,191,36,.12);color:#fbbf24">
+              <i class="fa-solid fa-crown" style="font-size:9px;margin-right:2px"></i>Pro/Max
+            </span>
+            @endif
           </div>
           <div style="font-size:12.5px;color:var(--muted);margin-top:3px;line-height:1.5">{{ $desc }}</div>
           @if($isQrisPay && !$isSystemAdmin)
@@ -243,6 +255,14 @@
             <i class="fa-solid fa-circle-info" style="font-size:11px"></i>
             Hanya Administrator yang dapat mengaktifkan fitur ini.
           </div>
+          @endif
+          @if($lockedByPlan)
+          <div style="font-size:12px;color:#fbbf24;margin-top:5px;display:flex;align-items:center;gap:5px">
+            <i class="fa-solid fa-circle-info" style="font-size:11px"></i>
+            Upgrade paket untuk mengaktifkan metode pembayaran ini.
+          </div>
+          @endif
+          @if(($isQrisPay && !$isSystemAdmin) || $lockedByPlan)
           @if($adminContact)
           <div style="margin-top:8px;padding:10px 12px;border-radius:10px;background:var(--surface2);border:1px solid var(--border);display:flex;align-items:center;gap:10px">
             <div style="width:32px;height:32px;border-radius:50%;background:var(--ac-lt);color:var(--ac);display:grid;place-items:center;flex-shrink:0">

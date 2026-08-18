@@ -268,6 +268,8 @@ select.f-input option{background:var(--surface2);color:var(--text)}
   @php
     $pendingCount = \App\Models\Order::where('outlet_id', $outlet->id)
         ->whereNull('user_id')->where('status', 'pending')->count();
+    $unpaidInvoiceCount = \App\Models\ProOwnerInvoice::where('outlet_id', $outlet->id)
+        ->where('status', 'belum_lunas')->count();
   @endphp
 
   @if($isKasir)
@@ -491,6 +493,14 @@ select.f-input option{background:var(--surface2);color:var(--text)}
        class="nav-item {{ $outlet->routeIs('settings.*') ? 'nav-active' : 'nav-inactive' }}">
       <i class="fa-solid fa-gear" style="width:15px;text-align:center;font-size:13px"></i>
       Pengaturan Outlet
+    </a>
+    <a href="{{ route('outlet.tagihan.index', $outlet) }}"
+       class="nav-item {{ request()->routeIs('outlet.tagihan.*') ? 'nav-active' : 'nav-inactive' }}">
+      <i class="fa-solid fa-file-invoice-dollar" style="width:15px;text-align:center;font-size:13px"></i>
+      Tagihan
+      @if($unpaidInvoiceCount > 0)
+      <span style="margin-left:auto;background:#ef4444;color:#fff;border-radius:99px;font-size:10px;font-weight:700;padding:1px 6px;min-width:18px;text-align:center;display:inline-block">{{ $unpaidInvoiceCount }}</span>
+      @endif
     </a>
     @endif
 

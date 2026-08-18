@@ -497,6 +497,26 @@ select.f-input option{background:var(--surface2);color:var(--text)}
       <i class="fa-solid fa-chart-pie" style="width:15px;text-align:center;font-size:13px"></i>Dashboard
     </a>
 
+    {{-- LANGGANAN (owner saja) --}}
+    @if($isOwner)
+    <a href="{{ route('pro.subscription') }}"
+       class="nav-item {{ request()->routeIs('pro.subscription') ? 'nav-active' : 'nav-inactive' }}">
+      <i class="fa-solid fa-crown" style="width:15px;text-align:center;font-size:13px;color:#fbbf24"></i>Paket Pro
+    </a>
+    @endif
+
+    {{-- ADMIN: KELOLA PAKET PRO --}}
+    @if($isAdmin)
+    <a href="{{ route('admin.pro.index') }}"
+       class="nav-item {{ request()->routeIs('admin.pro.*') ? 'nav-active' : 'nav-inactive' }}">
+      <i class="fa-solid fa-crown" style="width:15px;text-align:center;font-size:13px;color:#fbbf24"></i>Kelola Paket Pro
+    </a>
+    <a href="{{ route('admin.tagihan.index') }}"
+       class="nav-item {{ request()->routeIs('admin.tagihan.*') ? 'nav-active' : 'nav-inactive' }}">
+      <i class="fa-solid fa-file-invoice-dollar" style="width:15px;text-align:center;font-size:13px;color:#34d399"></i>Tagihan Pro Plan
+    </a>
+    @endif
+
     {{-- MANAJEMEN --}}
     @if($showMgmt || $isOwner || $isAdmin)
     <p class="nav-section">Manajemen</p>
@@ -642,8 +662,8 @@ select.f-input option{background:var(--surface2);color:var(--text)}
     </div>
 
     <div style="display:flex;align-items:center;gap:10px">
-      {{-- Period selector (owner/admin) --}}
-      @if(!$isKasir)
+      {{-- Period selector (admin only — dihilangkan untuk owner) --}}
+      @if(!$isKasir && !$isOwner)
       <select class="f-input" style="width:auto;padding:7px 12px;font-size:12.5px">
         <option>Juni 2026</option>
         <option>Mei 2026</option>

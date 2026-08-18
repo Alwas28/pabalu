@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Laundry;
 use App\Http\Controllers\Controller;
 
 use App\Exports\SalesReportExport;
+use App\Http\Controllers\Concerns\EnforcesProFeature;
 use App\Models\LaundryOrder;
 use App\Models\Outlet;
 use App\Models\User;
@@ -16,6 +17,8 @@ use Maatwebsite\Excel\Facades\Excel;
 
 class SalesReportController extends Controller
 {
+    use EnforcesProFeature;
+
     private function authorizeOutlet(Outlet $outlet): User
     {
         /** @var User $user */
@@ -135,6 +138,8 @@ class SalesReportController extends Controller
         if (!$user->hasPermission('report.sales')) {
             abort(403);
         }
+
+        $this->requireProFeature($outlet, $user, 'laundry_export_excel', 'Export Laporan ke Excel');
 
         $outlet->load('outletType');
         $data = $this->computeData($request, $outlet);

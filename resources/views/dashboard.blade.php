@@ -301,6 +301,26 @@
     </div>
   </div>
 
+  {{-- Notifikasi tagihan belum lunas --}}
+  @if($unpaidInvoiceCount > 0)
+  <div class="card animate-fadeUp" style="padding:16px 20px;background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.3);
+       display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+    <div style="width:40px;height:40px;border-radius:11px;background:rgba(248,113,113,.15);display:grid;place-items:center;color:#f87171;font-size:17px;flex-shrink:0">
+      <i class="fa-solid fa-file-invoice-dollar"></i>
+    </div>
+    <div style="flex:1;min-width:200px">
+      <div style="font-size:13.5px;font-weight:700;color:var(--text)">
+        {{ $unpaidInvoiceCount }} tagihan belum lunas — total Rp {{ number_format($unpaidInvoiceTotal, 0, ',', '.') }}
+      </div>
+      <div style="font-size:12px;color:var(--muted);margin-top:2px">
+        @foreach($unpaidInvoices->unique('outlet_id') as $inv)
+          <a href="{{ route('outlet.tagihan.index', $inv->outlet_id) }}" style="color:var(--muted);text-decoration:underline">{{ $inv->outlet?->name ?? 'Outlet' }}</a>@if(!$loop->last), @endif
+        @endforeach
+      </div>
+    </div>
+  </div>
+  @endif
+
   {{-- Stats --}}
   <div class="stat-grid animate-fadeUp d1">
     <div class="stat-card">

@@ -59,6 +59,10 @@ class UserController extends Controller
             : ['admin_outlet', 'kasir'];
     }
 
+    // max_kasir sekarang berarti batas PER OUTLET (lihat EmployeeController::
+    // outletKasirLimitMessage()), bukan total akun di seluruh akun owner — akun yang
+    // dibuat lewat halaman ini belum terikat outlet manapun (outlet_ids diisi belakangan
+    // lewat menu Karyawan), jadi tidak ada konteks outlet untuk ditegakkan di sini.
     public function index(): View
     {
         $this->authorizeManager();
@@ -102,7 +106,7 @@ class UserController extends Controller
             'name'     => ['required', 'string', 'max:255'],
             'email'    => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:users'],
             'role'     => ['required', 'in:' . implode(',', $this->allowedRoles())],
-            'password' => ['required', 'confirmed', Rules\Password::defaults()],
+            'password' => ['required', 'confirmed', Password::defaults()],
         ]);
 
         $user = User::create([

@@ -351,6 +351,14 @@ select.f-input option{background:var(--surface2);color:var(--text)}
     <a href="{{ $outlet->route('settings.edit', ['tab' => 'booking']) }}" class="nav-item {{ $outlet->routeIs('settings.edit') ? 'nav-active' : 'nav-inactive' }}">
       <i class="fa-solid fa-gear" style="width:15px;text-align:center;font-size:13px"></i>Pengaturan Rental
     </a>
+    @php $unpaidInvoiceCount = \App\Models\ProOwnerInvoice::where('outlet_id', $outlet->id)->where('status', 'belum_lunas')->count(); @endphp
+    <a href="{{ route('outlet.tagihan.index', $outlet) }}"
+       class="nav-item {{ request()->routeIs('outlet.tagihan.*') ? 'nav-active' : 'nav-inactive' }}">
+      <i class="fa-solid fa-file-invoice-dollar" style="width:15px;text-align:center;font-size:13px"></i>Tagihan
+      @if($unpaidInvoiceCount > 0)
+      <span style="margin-left:auto;background:#ef4444;color:#fff;border-radius:99px;font-size:10px;font-weight:700;padding:1px 6px;min-width:18px;text-align:center;display:inline-block">{{ $unpaidInvoiceCount }}</span>
+      @endif
+    </a>
     @endif
 
   @endif {{-- end kasir / non-kasir nav --}}

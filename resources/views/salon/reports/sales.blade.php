@@ -1,4 +1,4 @@
-<x-outlet-layout :outlet="$outlet" pageTitle="Laporan Penjualan">
+<x-outlet-layout :outlet="$outlet" pageTitle="Laporan Transaksi">
 
 @php
   $paymentMeta = [
@@ -117,7 +117,7 @@ document.addEventListener('DOMContentLoaded', rebuildChart);
 {{-- ── HEADER ── --}}
 <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px">
   <div>
-    <h2 class="font-display" style="font-size:20px;font-weight:700;color:var(--text)">Laporan Penjualan</h2>
+    <h2 class="font-display" style="font-size:20px;font-weight:700;color:var(--text)">Laporan Transaksi</h2>
     <p style="font-size:13px;color:var(--muted);margin-top:2px">
       {{ \Carbon\Carbon::parse($from)->translatedFormat('d M Y') }} –
       {{ \Carbon\Carbon::parse($to)->translatedFormat('d M Y') }}

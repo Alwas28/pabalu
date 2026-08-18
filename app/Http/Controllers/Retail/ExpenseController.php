@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Retail;
 
 use App\Http\Controllers\Controller;
 
+use App\Http\Controllers\Concerns\EnforcesProFeature;
 use App\Models\Expense;
 use App\Models\Outlet;
 use App\Models\User;
@@ -14,6 +15,11 @@ use Illuminate\View\View;
 
 class ExpenseController extends Controller
 {
+    use EnforcesProFeature;
+
+    private const FEATURE_SLUG  = 'retail_pengeluaran';
+    private const FEATURE_LABEL = 'Kelola Pengeluaran';
+
     private function authorizeOutlet(Outlet $outlet): User
     {
         /** @var User $user */
@@ -45,6 +51,8 @@ class ExpenseController extends Controller
         if (!$user->hasPermission('expense.view')) {
             abort(403);
         }
+
+        $this->requireProFeature($outlet, $user, self::FEATURE_SLUG, self::FEATURE_LABEL);
 
         $outlet->load(['outletType', 'expenseCategories']);
 
@@ -91,6 +99,8 @@ class ExpenseController extends Controller
             abort(403);
         }
 
+        $this->requireProFeature($outlet, $user, self::FEATURE_SLUG, self::FEATURE_LABEL);
+
         $outlet->load('expenseCategories');
         $allSlugs = implode(',', array_keys($this->resolveCategories($outlet)));
 
@@ -118,6 +128,8 @@ class ExpenseController extends Controller
         if ($expense->outlet_id != $outlet->id) {
             abort(404);
         }
+
+        $this->requireProFeature($outlet, $user, self::FEATURE_SLUG, self::FEATURE_LABEL);
 
         $outlet->load('expenseCategories');
         $allSlugs = implode(',', array_keys($this->resolveCategories($outlet)));
@@ -147,6 +159,8 @@ class ExpenseController extends Controller
             abort(404);
         }
 
+        $this->requireProFeature($outlet, $user, self::FEATURE_SLUG, self::FEATURE_LABEL);
+
         $expense->delete();
 
         return back()->with('success', 'Pengeluaran berhasil dihapus.');
@@ -159,6 +173,8 @@ class ExpenseController extends Controller
         if (!$user->hasPermission('expense.edit')) {
             abort(403);
         }
+
+        $this->requireProFeature($outlet, $user, self::FEATURE_SLUG, self::FEATURE_LABEL);
 
         $request->validate([
             'label' => ['required', 'string', 'max:100'],
@@ -193,6 +209,8 @@ class ExpenseController extends Controller
         if (!$user->hasPermission('expense.edit')) {
             abort(403);
         }
+
+        $this->requireProFeature($outlet, $user, self::FEATURE_SLUG, self::FEATURE_LABEL);
 
         $outlet->expenseCategories()->where('slug', $slug)->delete();
 

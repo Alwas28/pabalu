@@ -67,6 +67,7 @@
               <th style="padding:12px 16px;text-align:left;font-size:11.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">Kontak</th>
               <th style="padding:12px 16px;text-align:left;font-size:11.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">Bisnis</th>
               <th style="padding:12px 16px;text-align:center;font-size:11.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">Outlet</th>
+              <th style="padding:12px 16px;text-align:center;font-size:11.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">Paket</th>
               <th style="padding:12px 16px;text-align:left;font-size:11.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">Bergabung</th>
               <th style="padding:12px 16px;text-align:center;font-size:11.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">Status</th>
             </tr>
@@ -124,6 +125,24 @@
                 <span style="font-size:13px;font-weight:700;color:{{ $owner->outlets_count > 0 ? 'var(--ac)' : 'var(--muted)' }}">
                   {{ $owner->outlets_count }}
                 </span>
+              </td>
+
+              {{-- Kolom paket --}}
+              @php
+                $sub      = $owner->currentProSubscription;
+                $planName = $sub?->plan->name ?? 'Free';
+                $planBg   = match($planName) { 'Max' => 'rgba(251,191,36,.15)', 'Pro' => 'rgba(99,102,241,.15)', default => 'rgba(148,163,184,.12)' };
+                $planFg   = match($planName) { 'Max' => '#fbbf24', 'Pro' => '#818cf8', default => '#94a3b8' };
+              @endphp
+              <td style="padding:14px 16px;text-align:center">
+                <span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:99px;background:{{ $planBg }};color:{{ $planFg }}">
+                  @if($planName !== 'Free')<i class="fa-solid fa-crown" style="font-size:9px;margin-right:3px"></i>@endif{{ $planName }}
+                </span>
+                @if($sub?->expires_at)
+                <div style="font-size:10px;color:var(--muted);margin-top:3px">
+                  s.d. {{ $sub->expires_at->translatedFormat('d M Y') }}
+                </div>
+                @endif
               </td>
 
               {{-- Kolom bergabung --}}

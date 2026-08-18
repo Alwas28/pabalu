@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Retail;
 
 use App\Http\Controllers\Controller;
 
+use App\Http\Controllers\Concerns\EnforcesProFeature;
 use App\Models\Outlet;
 use App\Models\Product;
 use App\Models\User;
@@ -15,6 +16,8 @@ use Illuminate\View\View;
 
 class ProductController extends Controller
 {
+    use EnforcesProFeature;
+
     private function authorizeOutlet(Outlet $outlet): User
     {
         /** @var User $user */
@@ -59,7 +62,9 @@ class ProductController extends Controller
         $categories = $outlet->categories()->where('is_active', true)->get();
         $trackCogs  = $outlet->outletType?->track_cogs ?? false;
 
-        return view('retail.products.index', compact('outlet', 'user', 'products', 'categories', 'trackCogs'));
+        $canEditPrice = $this->ownerHasProFeature($outlet, $user, 'retail_harga_hpp');
+
+        return view('retail.products.index', compact('outlet', 'user', 'products', 'categories', 'trackCogs', 'canEditPrice'));
     }
 
     public function store(Request $request, Outlet $outlet): RedirectResponse

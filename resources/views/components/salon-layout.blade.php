@@ -297,12 +297,12 @@ select.f-input option{background:var(--surface2);color:var(--text)}
     <p class="nav-section" style="margin-top:8px">Utama</p>
     <a href="{{ $outlet->route('show') }}"
        class="nav-item {{ $outlet->routeIs('show') ? 'nav-active' : 'nav-inactive' }}">
-      <i class="fa-solid fa-store" style="width:15px;text-align:center;font-size:13px"></i>Dashboard Toko
+      <i class="fa-solid fa-store" style="width:15px;text-align:center;font-size:13px"></i>Dashboard Salon
     </a>
 
-    {{-- OPERASIONAL TOKO --}}
+    {{-- OPERASIONAL SALON --}}
     @if($p('pos.access') || ($trackCogs && $p('stock.in')) || $p('expense.view') || ($trackCogs && $p('stock.waste')))
-    <p class="nav-section">Operasional Toko</p>
+    <p class="nav-section">Operasional Salon</p>
     @if($p('pos.access'))
     <a href="{{ $outlet->route('pos.index') }}"
        class="nav-item {{ $outlet->routeIs('pos.*') ? 'nav-active' : 'nav-inactive' }}">
@@ -382,7 +382,7 @@ select.f-input option{background:var(--surface2);color:var(--text)}
     @if($p('report.sales'))
     <a href="{{ $outlet->route('reports.sales') }}"
        class="nav-item {{ $outlet->routeIs('reports.sales*') ? 'nav-active' : 'nav-inactive' }}">
-      <i class="fa-solid fa-chart-line" style="width:15px;text-align:center;font-size:13px"></i>Laporan Penjualan
+      <i class="fa-solid fa-chart-line" style="width:15px;text-align:center;font-size:13px"></i>Laporan Transaksi
     </a>
     @endif
     @if($p('report.profit_loss'))
@@ -405,7 +405,15 @@ select.f-input option{background:var(--surface2);color:var(--text)}
     <p class="nav-section">Konfigurasi</p>
     <a href="{{ $outlet->route('settings.edit') }}"
        class="nav-item {{ $outlet->routeIs('settings.*') ? 'nav-active' : 'nav-inactive' }}">
-      <i class="fa-solid fa-gear" style="width:15px;text-align:center;font-size:13px"></i>Pengaturan Toko
+      <i class="fa-solid fa-gear" style="width:15px;text-align:center;font-size:13px"></i>Pengaturan Salon
+    </a>
+    @php $unpaidInvoiceCount = \App\Models\ProOwnerInvoice::where('outlet_id', $outlet->id)->where('status', 'belum_lunas')->count(); @endphp
+    <a href="{{ route('outlet.tagihan.index', $outlet) }}"
+       class="nav-item {{ request()->routeIs('outlet.tagihan.*') ? 'nav-active' : 'nav-inactive' }}">
+      <i class="fa-solid fa-file-invoice-dollar" style="width:15px;text-align:center;font-size:13px"></i>Tagihan
+      @if($unpaidInvoiceCount > 0)
+      <span style="margin-left:auto;background:#ef4444;color:#fff;border-radius:99px;font-size:10px;font-weight:700;padding:1px 6px;min-width:18px;text-align:center;display:inline-block">{{ $unpaidInvoiceCount }}</span>
+      @endif
     </a>
     @endif
 

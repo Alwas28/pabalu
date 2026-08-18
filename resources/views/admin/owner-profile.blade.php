@@ -116,6 +116,48 @@
     </div>
   </div>
 
+  {{-- ── Kuota Outlet ── --}}
+  @php
+    $plan = $user->currentProPlan();
+    $planLimit = $plan->max_outlet_types;
+    $effectiveLimit = $user->effectiveOutletLimit();
+  @endphp
+  <div class="card animate-fadeUp" style="margin-bottom:24px">
+    <div class="card-header">
+      <div class="card-title"><i class="fa-solid fa-gauge-high a-text" style="margin-right:8px"></i>Kuota Outlet</div>
+    </div>
+    <div style="padding:20px;display:flex;align-items:flex-end;gap:24px;flex-wrap:wrap">
+      <div>
+        <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">Batas Paket ({{ $plan->name }})</div>
+        <div style="font-size:20px;font-weight:800;color:var(--text);margin-top:3px">{{ $planLimit === null ? 'Tanpa batas' : $planLimit . ' outlet' }}</div>
+      </div>
+      @if($planLimit !== null)
+      <div style="font-size:20px;color:var(--muted);padding-bottom:2px">+</div>
+      <form method="POST" action="{{ route('owners.outlet-quota.update', $user) }}" style="display:flex;align-items:flex-end;gap:10px">
+        @csrf @method('PATCH')
+        <div>
+          <label class="f-label">Kuota Tambahan Khusus Owner Ini</label>
+          <input name="extra_outlet_quota" type="number" class="f-input" style="width:110px" min="0" max="1000" value="{{ $user->extra_outlet_quota }}">
+        </div>
+        <button type="submit"
+          style="padding:9px 16px;border-radius:10px;border:none;background:linear-gradient(135deg,var(--ac),var(--ac2));color:#fff;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap">
+          Simpan
+        </button>
+      </form>
+      <div style="font-size:20px;color:var(--muted);padding-bottom:2px">=</div>
+      <div>
+        <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">Batas Efektif</div>
+        <div style="font-size:20px;font-weight:800;color:#34d399;margin-top:3px">{{ $effectiveLimit }} outlet</div>
+      </div>
+      @endif
+    </div>
+    @if($planLimit !== null)
+    <p style="padding:0 20px 18px;font-size:11px;color:var(--muted);line-height:1.6">
+      Kuota tambahan berlaku khusus untuk owner ini saja — tidak mengubah batas paket ({{ $plan->name }}) untuk owner lain. Owner ini sekarang punya {{ $totalOutlets }} dari {{ $effectiveLimit }} outlet.
+    </p>
+    @endif
+  </div>
+
   {{-- ── Daftar Outlet ── --}}
   <h3 style="font-size:15px;font-weight:700;color:var(--text);margin:0 0 14px;display:flex;align-items:center;gap:8px">
     <i class="fa-solid fa-shop a-text"></i> Daftar Outlet ({{ $totalOutlets }})

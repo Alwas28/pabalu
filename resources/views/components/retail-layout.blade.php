@@ -11,6 +11,9 @@
   $isAdmin = $role === 'admin';
   $isOwner = $role === 'owner';
 
+  $proPlan = $outlet->proPlan();
+  $feature = fn(string $s) => $isAdmin || $proPlan->hasFeature($s);
+
   $roleLabels = ['admin'=>'Administrator','owner'=>'Pemilik Toko','admin_outlet'=>'Admin Outlet','kasir'=>'Kasir'];
   $roleLabel  = $roleLabels[$role] ?? 'Pengguna';
   $initial    = strtoupper(substr($user->name, 0, 1));
@@ -234,7 +237,7 @@ select.f-input option{background:var(--surface2);color:var(--text)}
       <i class="fa-solid fa-clock-rotate-left" style="width:15px;text-align:center;font-size:13px"></i>Transaksi
     </a>
     @endif
-    @if($p('stock.in'))
+    @if($p('stock.in') && $feature('retail_manajemen_stok'))
     <a href="{{ $outlet->route('stock-in.index') }}"
        class="nav-item {{ $outlet->routeIs('stock-in.*') ? 'nav-active' : 'nav-inactive' }}">
       <i class="fa-solid fa-truck-ramp-box" style="width:15px;text-align:center;font-size:13px"></i>Tambah Stok
@@ -246,13 +249,13 @@ select.f-input option{background:var(--surface2);color:var(--text)}
       <i class="fa-solid fa-warehouse" style="width:15px;text-align:center;font-size:13px"></i>Stok Barang
     </a>
     @endif
-    @if($p('expense.view'))
+    @if($p('expense.view') && $feature('retail_pengeluaran'))
     <a href="{{ $outlet->route('expenses.index') }}"
        class="nav-item {{ $outlet->routeIs('expenses.*') ? 'nav-active' : 'nav-inactive' }}">
       <i class="fa-solid fa-money-bill-wave" style="width:15px;text-align:center;font-size:13px"></i>Pengeluaran
     </a>
     @endif
-    @if($p('stock.waste'))
+    @if($p('stock.waste') && $feature('retail_waste'))
     <a href="{{ $outlet->route('waste.index') }}"
        class="nav-item {{ $outlet->routeIs('waste.*') ? 'nav-active' : 'nav-inactive' }}">
       <i class="fa-solid fa-box-archive" style="width:15px;text-align:center;font-size:13px"></i>Barang Rusak
@@ -318,19 +321,19 @@ select.f-input option{background:var(--surface2);color:var(--text)}
       @endif
     </a>
     @endif
-    @if($p('stock.in'))
+    @if($p('stock.in') && $feature('retail_manajemen_stok'))
     <a href="{{ $outlet->route('stock-in.index') }}"
        class="nav-item {{ $outlet->routeIs('stock-in.*') ? 'nav-active' : 'nav-inactive' }}">
       <i class="fa-solid fa-truck-ramp-box" style="width:15px;text-align:center;font-size:13px"></i>Tambah Stok
     </a>
     @endif
-    @if($p('expense.view'))
+    @if($p('expense.view') && $feature('retail_pengeluaran'))
     <a href="{{ $outlet->route('expenses.index') }}"
        class="nav-item {{ $outlet->routeIs('expenses.*') ? 'nav-active' : 'nav-inactive' }}">
       <i class="fa-solid fa-money-bill-wave" style="width:15px;text-align:center;font-size:13px"></i>Pengeluaran
     </a>
     @endif
-    @if($p('stock.waste'))
+    @if($p('stock.waste') && $feature('retail_waste'))
     <a href="{{ $outlet->route('waste.index') }}"
        class="nav-item {{ $outlet->routeIs('waste.*') ? 'nav-active' : 'nav-inactive' }}">
       <i class="fa-solid fa-box-archive" style="width:15px;text-align:center;font-size:13px"></i>Barang Rusak
@@ -377,15 +380,15 @@ select.f-input option{background:var(--surface2);color:var(--text)}
     @endif
 
     {{-- LAPORAN --}}
-    @if($p('report.sales') || $p('report.profit_loss'))
+    @if(($p('report.sales') && $feature('retail_laporan_jual')) || ($p('report.profit_loss') && $feature('retail_laporan_lanjutan')))
     <p class="nav-section">Laporan</p>
-    @if($p('report.sales'))
+    @if($p('report.sales') && $feature('retail_laporan_jual'))
     <a href="{{ $outlet->route('reports.sales') }}"
        class="nav-item {{ $outlet->routeIs('reports.sales*') ? 'nav-active' : 'nav-inactive' }}">
       <i class="fa-solid fa-chart-line" style="width:15px;text-align:center;font-size:13px"></i>Laporan Penjualan
     </a>
     @endif
-    @if($p('report.profit_loss'))
+    @if($p('report.profit_loss') && $feature('retail_laporan_lanjutan'))
     <a href="{{ $outlet->route('reports.profit-loss') }}"
        class="nav-item {{ $outlet->routeIs('reports.profit-loss*') ? 'nav-active' : 'nav-inactive' }}">
       <i class="fa-solid fa-scale-balanced" style="width:15px;text-align:center;font-size:13px"></i>Laba &amp; Rugi (HPP)
@@ -406,6 +409,14 @@ select.f-input option{background:var(--surface2);color:var(--text)}
     <a href="{{ $outlet->route('settings.edit') }}"
        class="nav-item {{ $outlet->routeIs('settings.*') ? 'nav-active' : 'nav-inactive' }}">
       <i class="fa-solid fa-gear" style="width:15px;text-align:center;font-size:13px"></i>Pengaturan Toko
+    </a>
+    @php $unpaidInvoiceCount = \App\Models\ProOwnerInvoice::where('outlet_id', $outlet->id)->where('status', 'belum_lunas')->count(); @endphp
+    <a href="{{ route('outlet.tagihan.index', $outlet) }}"
+       class="nav-item {{ request()->routeIs('outlet.tagihan.*') ? 'nav-active' : 'nav-inactive' }}">
+      <i class="fa-solid fa-file-invoice-dollar" style="width:15px;text-align:center;font-size:13px"></i>Tagihan
+      @if($unpaidInvoiceCount > 0)
+      <span style="margin-left:auto;background:#ef4444;color:#fff;border-radius:99px;font-size:10px;font-weight:700;padding:1px 6px;min-width:18px;text-align:center;display:inline-block">{{ $unpaidInvoiceCount }}</span>
+      @endif
     </a>
     @endif
 

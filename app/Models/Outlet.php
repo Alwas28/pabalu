@@ -115,6 +115,11 @@ class Outlet extends Model
         return $this->hasMany(Transaction::class);
     }
 
+    public function proInvoices(): HasMany
+    {
+        return $this->hasMany(ProOwnerInvoice::class);
+    }
+
     public function dailyClosings(): HasMany
     {
         return $this->hasMany(DailyClosing::class);
@@ -172,6 +177,13 @@ class Outlet extends Model
     {
         return ($this->outletType?->track_cogs ?? false)
             && !($this->outletType?->requires_opening_stock ?? true);
+    }
+
+    // Paket Pro berlaku milik OWNER outlet, bukan user yang sedang login —
+    // kasir/admin_outlet tidak punya subscription sendiri.
+    public function proPlan(): ProPlan
+    {
+        return $this->owner?->currentProPlan() ?? ProPlan::where('is_default', true)->firstOrFail();
     }
 
     public function isAccessibleBy(User $user): bool

@@ -34,7 +34,7 @@ class OutletController extends Controller
         return view('outlets.index', compact('outlets', 'outletTypes', 'user', 'provinces'));
     }
 
-    public function create(): View
+    public function create(): View|RedirectResponse
     {
         /** @var User $user */
         $user = Auth::user();
@@ -43,10 +43,26 @@ class OutletController extends Controller
             abort(403);
         }
 
+        if ($message = $this->outletLimitMessage($user)) {
+            return redirect()->route('outlets.index')->with('error', $message);
+        }
+
         $outletTypes = OutletType::where('is_active', true)
             ->where('slug', '!=', 'lainnya')
             ->orderBy('sort_order')
             ->get();
+
+        // Sembunyikan jenis outlet yang tidak diizinkan paket owner dari pilihan —
+        // supaya form tidak bisa "ditipu" pilih jenis yang nanti ditolak saat submit.
+        if ($user->role !== 'admin') {
+            $plan = $user->currentProPlan();
+            $outletTypes = $outletTypes->filter(fn ($t) => $plan->allowsOutletType($t->id))->values();
+
+            if ($outletTypes->isEmpty()) {
+                return redirect()->route('outlets.index')
+                    ->with('error', "Paket Anda saat ini ({$plan->name}) tidak mengizinkan jenis outlet apapun untuk dibuat. Hubungi admin.");
+            }
+        }
 
         $provinces = \App\Models\Province::orderBy('name')->get();
 
@@ -84,6 +100,13 @@ class OutletController extends Controller
             'latitude'               => ['nullable', 'numeric', 'between:-90,90'],
             'longitude'              => ['nullable', 'numeric', 'between:-180,180'],
         ]);
+
+        if ($message = $this->outletLimitMessage($user)) {
+            return back()->withInput()->with('error', $message);
+        }
+        if ($message = $this->outletTypeRestrictionMessage($user, (int) $data['outlet_type_id'])) {
+            return back()->withInput()->with('error', $message);
+        }
 
         $data['owner_id']  = $user->id;
         $data['is_active'] = true;
@@ -155,6 +178,46 @@ class OutletController extends Controller
         $status = $outlet->is_active ? 'diaktifkan' : 'dinonaktifkan';
 
         return back()->with('success', "Outlet berhasil {$status}.");
+    }
+
+    // Batas JUMLAH TOTAL outlet per Paket Pro owner (semua jenis dihitung sama),
+    // ditambah kuota tambahan khusus owner ini (extra_outlet_quota, diatur admin per-owner
+    // lewat halaman Profil Owner) — dipakai kalau owner butuh lebih dari batas paketnya
+    // tanpa harus upgrade paket. Dicek di create() (supaya form tidak bisa dibuka sama
+    // sekali) dan store() (jaga-jaga kalau limit berubah/tercapai di antara buka form & submit).
+    private function outletLimitMessage(User $user): ?string
+    {
+        if ($user->role === 'admin') {
+            return null;
+        }
+
+        $plan = $user->currentProPlan();
+        $maxOutlets = $user->effectiveOutletLimit();
+        if ($maxOutlets === null) {
+            return null;
+        }
+
+        if ($user->outlets()->count() >= $maxOutlets) {
+            return "Paket Anda saat ini ({$plan->name}) hanya boleh punya {$maxOutlets} outlet. Upgrade paket atau hubungi admin untuk menambah outlet baru.";
+        }
+
+        return null;
+    }
+
+    // Batas JENIS outlet yang boleh dibuat per Paket Pro owner (mis. paket usage-based
+    // yang cuma diizinkan admin untuk jenis outlet tertentu). Kosong = tidak dibatasi.
+    private function outletTypeRestrictionMessage(User $user, int $outletTypeId): ?string
+    {
+        if ($user->role === 'admin') {
+            return null;
+        }
+
+        $plan = $user->currentProPlan();
+        if ($plan->allowsOutletType($outletTypeId)) {
+            return null;
+        }
+
+        return "Paket Anda saat ini ({$plan->name}) tidak mengizinkan jenis outlet ini. Hubungi admin untuk info lebih lanjut.";
     }
 
     private function generateOutletCode(): string

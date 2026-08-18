@@ -5,6 +5,7 @@ namespace App\Http\Resources;
 use App\Models\Transaction;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\Storage;
 
 class TransactionResource extends JsonResource
 {
@@ -23,6 +24,8 @@ class TransactionResource extends JsonResource
             'payment_label'       => Transaction::$paymentLabels[$this->payment_method] ?? $this->payment_method,
             'payment_amount'      => (int) $this->payment_amount,
             'change_amount'       => (int) $this->change_amount,
+            'reference_number'    => $this->reference_number,
+            'proof_image_url'     => $this->proof_image ? Storage::url($this->proof_image) : null,
             'status'              => $this->status,
             'notes'               => $this->notes,
             'items' => $this->whenLoaded('items', fn () => $this->items->map(fn ($item) => [

@@ -12,7 +12,7 @@
   ];
 @endphp
 
-<x-salon-layout :outlet="$outlet" pageTitle="Dashboard Toko">
+<x-salon-layout :outlet="$outlet" pageTitle="Dashboard Salon">
 
 @push('scripts')
 <script>
@@ -102,11 +102,11 @@ document.addEventListener('DOMContentLoaded', () => buildChart('week'));
 </script>
 @endpush
 
-{{-- ── BADGE RETAIL ── --}}
+{{-- ── BADGE JENIS OUTLET ── --}}
 <div style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:99px;background:rgba(79,110,247,.12);border:1px solid rgba(79,110,247,.25);margin-bottom:18px">
   <i class="fa-solid fa-tag" style="font-size:11px;color:#818cf8"></i>
-  <span style="font-size:12px;font-weight:600;color:#818cf8">{{ $type?->name ?? 'Retail' }}</span>
-  <span style="font-size:11px;color:var(--muted)">· Stok Kumulatif · Tracking HPP</span>
+  <span style="font-size:12px;font-weight:600;color:#818cf8">{{ $type?->name ?? 'Salon & Barbershop' }}</span>
+  <span style="font-size:11px;color:var(--muted)">@if($trackCogs)· Stok Kumulatif · Tracking HPP@else· Kasir &amp; Manajemen Layanan@endif</span>
 </div>
 
 {{-- ── STAT CARDS ── --}}

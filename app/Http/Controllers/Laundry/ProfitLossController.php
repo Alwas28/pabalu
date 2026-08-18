@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Laundry;
 
 use App\Http\Controllers\Controller;
 
+use App\Http\Controllers\Concerns\EnforcesProFeature;
 use App\Models\Expense;
 use App\Models\Outlet;
 use App\Models\User;
@@ -14,6 +15,8 @@ use Illuminate\View\View;
 
 class ProfitLossController extends Controller
 {
+    use EnforcesProFeature;
+
     private function authorizeOutlet(Outlet $outlet): User
     {
         /** @var User $user */
@@ -33,6 +36,8 @@ class ProfitLossController extends Controller
         if (!$user->hasPermission('report.profit_loss')) {
             abort(403);
         }
+
+        $this->requireProFeature($outlet, $user, 'laundry_laporan_lanjutan', 'Laporan Lanjutan');
 
         $outlet->load('outletType');
         $trackCogs = false; // laundry tidak memakai track_cogs

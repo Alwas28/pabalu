@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Api\V1\Concerns\AuthorizesOutlet;
+use App\Http\Controllers\Concerns\EnforcesProFeature;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\LaundryOrderResource;
 use App\Http\Resources\ProductResource;
@@ -23,7 +24,7 @@ use Illuminate\Support\Facades\DB;
 // (status jadi "diambil"). Cermin persis Laundry\LaundryOrderController (web).
 class LaundryController extends Controller
 {
-    use AuthorizesOutlet;
+    use AuthorizesOutlet, EnforcesProFeature;
 
     private function ensureSupported(Outlet $outlet): void
     {
@@ -34,8 +35,9 @@ class LaundryController extends Controller
 
     public function products(Request $request, Outlet $outlet): JsonResponse
     {
-        $this->authorizeOutlet($request, $outlet);
+        $user = $this->authorizeOutlet($request, $outlet);
         $this->ensureSupported($outlet);
+        $this->requireProFeature($outlet, $user, 'laundry_akses_mobile', 'Akses Aplikasi Kasir Mobile');
 
         $products = $outlet->products()
             ->where('is_active', true)
@@ -48,8 +50,9 @@ class LaundryController extends Controller
 
     public function index(Request $request, Outlet $outlet): JsonResponse
     {
-        $this->authorizeOutlet($request, $outlet);
+        $user = $this->authorizeOutlet($request, $outlet);
         $this->ensureSupported($outlet);
+        $this->requireProFeature($outlet, $user, 'laundry_akses_mobile', 'Akses Aplikasi Kasir Mobile');
 
         $status = $request->input('status', 'masuk');
         if (!in_array($status, ['masuk', 'proses', 'selesai', 'diambil'], true)) {
@@ -82,7 +85,8 @@ class LaundryController extends Controller
 
     public function show(Request $request, Outlet $outlet, LaundryOrder $laundryOrder): JsonResponse
     {
-        $this->authorizeOutlet($request, $outlet);
+        $user = $this->authorizeOutlet($request, $outlet);
+        $this->requireProFeature($outlet, $user, 'laundry_akses_mobile', 'Akses Aplikasi Kasir Mobile');
 
         if ($laundryOrder->outlet_id !== $outlet->id) {
             abort(404);
@@ -97,6 +101,7 @@ class LaundryController extends Controller
     {
         $user = $this->authorizeOutlet($request, $outlet);
         $this->ensureSupported($outlet);
+        $this->requireProFeature($outlet, $user, 'laundry_akses_mobile', 'Akses Aplikasi Kasir Mobile');
 
         $request->validate([
             'customer_id'           => ['nullable', 'integer'],
@@ -114,6 +119,19 @@ class LaundryController extends Controller
             'items.*.unit'          => ['nullable', 'string', 'max:30'],
             'items.*.item_notes'    => ['nullable', 'string', 'max:300'],
         ]);
+
+        // Tanpa fitur "Simpan Pelanggan Cepat", pesanan harus untuk pelanggan yang
+        // sudah terdaftar (customer_id valid milik outlet ini).
+        if (!$this->ownerHasProFeature($outlet, $user, 'laundry_simpan_pelanggan_cepat')) {
+            $customerId    = $request->input('customer_id');
+            $customerValid = $customerId && Customer::where('id', $customerId)->where('outlet_id', $outlet->id)->exists();
+
+            if (!$customerValid) {
+                return response()->json([
+                    'message' => 'Paket Anda belum termasuk fitur "Simpan Pelanggan Cepat". Tambahkan pelanggan ini dulu di menu Pelanggan, baru bisa membuat pesanan.',
+                ], 422);
+            }
+        }
 
         $order = DB::transaction(function () use ($request, $outlet, $user) {
             $customerId = null;
@@ -194,7 +212,8 @@ class LaundryController extends Controller
 
     public function updateStatus(Request $request, Outlet $outlet, LaundryOrder $laundryOrder): JsonResponse
     {
-        $this->authorizeOutlet($request, $outlet);
+        $user = $this->authorizeOutlet($request, $outlet);
+        $this->requireProFeature($outlet, $user, 'laundry_akses_mobile', 'Akses Aplikasi Kasir Mobile');
 
         if ($laundryOrder->outlet_id !== $outlet->id) {
             abort(404);
@@ -213,6 +232,7 @@ class LaundryController extends Controller
     public function pay(Request $request, Outlet $outlet, LaundryOrder $laundryOrder): JsonResponse
     {
         $user = $this->authorizeOutlet($request, $outlet);
+        $this->requireProFeature($outlet, $user, 'laundry_akses_mobile', 'Akses Aplikasi Kasir Mobile');
 
         if ($laundryOrder->outlet_id !== $outlet->id) {
             abort(404);

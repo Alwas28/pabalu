@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Laundry;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Concerns\EnforcesProFeature;
 use App\Models\Customer;
 use App\Models\LaundryOrder;
 use App\Models\Outlet;
@@ -18,6 +19,8 @@ use Illuminate\View\View;
 
 class LaundryOrderController extends Controller
 {
+    use EnforcesProFeature;
+
     private function authorizeOutlet(Outlet $outlet): User
     {
         /** @var User $user */
@@ -86,6 +89,20 @@ class LaundryOrderController extends Controller
             'items.*.unit'         => ['nullable', 'string', 'max:30'],
             'items.*.item_notes'   => ['nullable', 'string', 'max:300'],
         ]);
+
+        // Tanpa fitur "Simpan Pelanggan Cepat", pesanan harus untuk pelanggan yang
+        // sudah terdaftar (customer_id valid milik outlet ini) — owner wajib tambah
+        // pelanggan dulu di menu Pelanggan sebelum bisa membuat pesanan.
+        if (!$this->ownerHasProFeature($outlet, $user, 'laundry_simpan_pelanggan_cepat')) {
+            $customerId    = $request->input('customer_id');
+            $customerValid = $customerId && Customer::where('id', $customerId)->where('outlet_id', $outlet->id)->exists();
+
+            if (!$customerValid) {
+                return response()->json([
+                    'message' => 'Paket Anda belum termasuk fitur "Simpan Pelanggan Cepat". Tambahkan pelanggan ini dulu di menu Pelanggan, baru bisa membuat pesanan.',
+                ], 422);
+            }
+        }
 
         /** @var LaundryOrder $order */
         $order = DB::transaction(function () use ($request, $outlet, $user) {

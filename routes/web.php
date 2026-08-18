@@ -16,6 +16,7 @@ use App\Http\Controllers\SetupController;
 use App\Http\Controllers\UserController;
 use App\Models\Employee;
 use App\Models\Outlet;
+use App\Models\ProOwnerInvoice;
 use App\Models\Transaction;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
@@ -561,11 +562,18 @@ Route::middleware(['auth', 'verified', 'require.setup'])->group(function () use 
                     ->where('status', 'completed')->orderByDesc('created_at')->limit(8)->get()
                 : collect();
 
+            $unpaidInvoices     = $outletIds->isNotEmpty()
+                ? ProOwnerInvoice::whereIn('outlet_id', $outletIds)->where('status', 'belum_lunas')->with('outlet')->get()
+                : collect();
+            $unpaidInvoiceCount = $unpaidInvoices->count();
+            $unpaidInvoiceTotal = $unpaidInvoices->sum('amount');
+
             return view('dashboard', compact(
                 'user', 'role', 'showWelcomeTour',
                 'outlets', 'employeeCount',
                 'txToday', 'revToday', 'txMonth', 'revMonth',
-                'weeklyStats', 'outletStats', 'recentTransactions'
+                'weeklyStats', 'outletStats', 'recentTransactions',
+                'unpaidInvoices', 'unpaidInvoiceCount', 'unpaidInvoiceTotal'
             ));
         }
 
@@ -660,6 +668,52 @@ Route::middleware(['auth', 'verified', 'require.setup'])->group(function () use 
         Route::post('{homeCategory}/toggle-active', [\App\Http\Controllers\HomeCategoryController::class, 'toggleActive'])->name('toggle-active');
     });
 
+    // Kelola Paket Pro (admin only)
+    Route::prefix('admin/pro')->name('admin.pro.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Admin\ProAdminController::class, 'features'])->name('index');
+        Route::get('fitur', [\App\Http\Controllers\Admin\ProAdminController::class, 'features'])->name('features');
+
+        Route::get('paket', [\App\Http\Controllers\Admin\ProAdminController::class, 'plans'])->name('plans');
+        Route::post('paket', [\App\Http\Controllers\Admin\ProAdminController::class, 'storePlan'])->name('plans.store');
+        Route::put('paket/{plan}', [\App\Http\Controllers\Admin\ProAdminController::class, 'updatePlan'])->name('plans.update');
+        Route::post('paket/{plan}/toggle-active', [\App\Http\Controllers\Admin\ProAdminController::class, 'togglePlanActive'])->name('plans.toggle-active');
+        Route::delete('paket/{plan}', [\App\Http\Controllers\Admin\ProAdminController::class, 'destroyPlan'])->name('plans.destroy');
+
+        Route::get('kode', [\App\Http\Controllers\Admin\ProAdminController::class, 'codes'])->name('codes');
+        Route::post('kode', [\App\Http\Controllers\Admin\ProAdminController::class, 'storeCode'])->name('codes.store');
+        Route::get('kode/{code}', [\App\Http\Controllers\Admin\ProAdminController::class, 'showCode'])->name('codes.show');
+        Route::put('kode/{code}', [\App\Http\Controllers\Admin\ProAdminController::class, 'updateCode'])->name('codes.update');
+        Route::delete('kode/{code}', [\App\Http\Controllers\Admin\ProAdminController::class, 'destroyCode'])->name('codes.destroy');
+        Route::delete('kode/{code}/pemakaian/{subscription}', [\App\Http\Controllers\Admin\ProAdminController::class, 'destroyUsage'])->name('codes.usage.destroy');
+    });
+
+    // Tagihan Pro Plan (admin only) — menu tersendiri, terpisah dari Kelola Paket Pro
+    // Rute literal (kode/, invoice/) DIDAFTAR DULU sebelum {outlet} wildcard di bawah,
+    // supaya tidak "tertangkap" duluan oleh route-model-binding {outlet}.
+    Route::prefix('admin/tagihan')->name('admin.tagihan.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Admin\OutletBillingController::class, 'index'])->name('index');
+
+        Route::get('kode', [\App\Http\Controllers\Admin\OutletBillingController::class, 'paymentCodes'])->name('codes');
+        Route::post('kode', [\App\Http\Controllers\Admin\OutletBillingController::class, 'storePaymentCode'])->name('codes.store');
+        Route::get('kode/{paymentCode}', [\App\Http\Controllers\Admin\OutletBillingController::class, 'showPaymentCode'])->name('codes.show');
+        Route::delete('kode/{paymentCode}', [\App\Http\Controllers\Admin\OutletBillingController::class, 'destroyPaymentCode'])->name('codes.destroy');
+
+        Route::get('pendapatan/{type}', [\App\Http\Controllers\Admin\OutletBillingController::class, 'revenueDetail'])
+            ->where('type', 'dibayar|gratis')->name('revenue');
+
+        Route::patch('invoice/{invoice}/lunas', [\App\Http\Controllers\Admin\OutletBillingController::class, 'markInvoicePaid'])->name('invoices.mark-paid');
+        Route::delete('invoice/{invoice}', [\App\Http\Controllers\Admin\OutletBillingController::class, 'destroyInvoice'])->name('invoices.destroy');
+
+        Route::get('{outlet}', [\App\Http\Controllers\Admin\OutletBillingController::class, 'show'])->name('show');
+        Route::get('{outlet}/hitung', [\App\Http\Controllers\Admin\OutletBillingController::class, 'calcTransaction'])->name('calc');
+        Route::post('{outlet}', [\App\Http\Controllers\Admin\OutletBillingController::class, 'storeInvoice'])->name('store');
+    });
+
+    // Langganan Pro (owner)
+    Route::get('langganan', [\App\Http\Controllers\ProSubscriptionController::class, 'show'])->name('pro.subscription');
+    Route::post('langganan/aktivasi', [\App\Http\Controllers\ProSubscriptionController::class, 'redeem'])->name('pro.subscription.redeem');
+    Route::post('langganan/aktifkan/{plan}', [\App\Http\Controllers\ProSubscriptionController::class, 'activate'])->name('pro.subscription.activate');
+
     // Pengaturan Sistem (admin only) — zona waktu aplikasi
     Route::get('pengaturan-sistem', [\App\Http\Controllers\SystemSettingController::class, 'edit'])->name('system-settings.edit');
     Route::put('pengaturan-sistem', [\App\Http\Controllers\SystemSettingController::class, 'update'])->name('system-settings.update');
@@ -689,6 +743,12 @@ Route::middleware(['auth', 'verified', 'require.setup'])->group(function () use 
     // Kelola Outlet (admin-level CRUD)
     Route::resource('outlets', OutletController::class)->except(['edit', 'show']);
     Route::post('outlets/{outlet}/toggle-active', [OutletController::class, 'toggleActive'])->name('outlets.toggle-active');
+
+    // Tagihan outlet (owner/admin_outlet) — lihat tagihan yang diinput admin & lunasi via kode
+    Route::prefix('outlet/{outlet}/tagihan')->name('outlet.tagihan.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\OutletInvoiceController::class, 'index'])->name('index');
+        Route::post('{invoice}/lunas-kode', [\App\Http\Controllers\OutletInvoiceController::class, 'redeem'])->name('redeem');
+    });
 
     // Role & Permission
     Route::resource('roles', RoleController::class);
@@ -726,6 +786,7 @@ Route::middleware(['auth', 'verified', 'require.setup'])->group(function () use 
     // Daftar & profil owner (admin only)
     Route::get('/owners', [\App\Http\Controllers\OwnerProfileController::class, 'index'])->name('owners.index');
     Route::get('/owners/{user}', [\App\Http\Controllers\OwnerProfileController::class, 'show'])->name('owners.show');
+    Route::patch('/owners/{user}/outlet-quota', [\App\Http\Controllers\OwnerProfileController::class, 'updateOutletQuota'])->name('owners.outlet-quota.update');
 
     // Chat (owner ↔ admin)
     Route::prefix('chat')->name('chat.')->group(function () {

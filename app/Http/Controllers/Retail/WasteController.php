@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Retail;
 
 use App\Http\Controllers\Controller;
 
+use App\Http\Controllers\Concerns\EnforcesProFeature;
 use App\Models\Outlet;
 use App\Models\User;
 use App\Models\Waste;
@@ -15,6 +16,11 @@ use Illuminate\View\View;
 
 class WasteController extends Controller
 {
+    use EnforcesProFeature;
+
+    private const FEATURE_SLUG  = 'retail_waste';
+    private const FEATURE_LABEL = 'Catat Barang Rusak/Waste';
+
     private function authorizeOutlet(Outlet $outlet): User
     {
         /** @var User $user */
@@ -34,6 +40,8 @@ class WasteController extends Controller
         if (!$user->hasPermission('stock.waste')) {
             abort(403);
         }
+
+        $this->requireProFeature($outlet, $user, self::FEATURE_SLUG, self::FEATURE_LABEL);
 
         $wastes = $outlet->wastes()
             ->with(['user', 'items'])
@@ -55,6 +63,8 @@ class WasteController extends Controller
             abort(403);
         }
 
+        $this->requireProFeature($outlet, $user, self::FEATURE_SLUG, self::FEATURE_LABEL);
+
         $products = $outlet->products()
             ->where('is_active', true)
             ->with('category')
@@ -74,6 +84,8 @@ class WasteController extends Controller
         if (!$user->hasPermission('stock.waste')) {
             abort(403);
         }
+
+        $this->requireProFeature($outlet, $user, self::FEATURE_SLUG, self::FEATURE_LABEL);
 
         $reasonKeys = implode(',', array_keys(Waste::$reasons));
 
@@ -138,6 +150,8 @@ class WasteController extends Controller
             abort(404);
         }
 
+        $this->requireProFeature($outlet, $user, self::FEATURE_SLUG, self::FEATURE_LABEL);
+
         $waste->load(['items.product.category', 'user']);
         $reasons = Waste::$reasons;
 
@@ -155,6 +169,8 @@ class WasteController extends Controller
         if ($waste->outlet_id != $outlet->id) {
             abort(404);
         }
+
+        $this->requireProFeature($outlet, $user, self::FEATURE_SLUG, self::FEATURE_LABEL);
 
         DB::transaction(function () use ($outlet, $waste) {
             $waste->load('items');

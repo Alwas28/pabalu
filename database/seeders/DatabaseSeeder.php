@@ -18,6 +18,7 @@ class DatabaseSeeder extends Seeder
         $this->call(RolesAndPermissionsSeeder::class);
         $this->call(OutletTypesSeeder::class);
         $this->call(ProvinceSeeder::class);
+        $this->call(ProSubscriptionSeeder::class);
 
         User::create([
             'name'              => 'Test User',

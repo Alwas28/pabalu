@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Retail;
 
 use App\Http\Controllers\Controller;
 
+use App\Http\Controllers\Concerns\EnforcesProFeature;
 use App\Models\Outlet;
 use App\Models\Product;
 use App\Models\ProductPriceHistory;
@@ -15,6 +16,8 @@ use Illuminate\View\View;
 
 class PriceController extends Controller
 {
+    use EnforcesProFeature;
+
     private function authorize(Outlet $outlet, Product $product): User
     {
         /** @var User $user */
@@ -43,6 +46,8 @@ class PriceController extends Controller
             abort(403);
         }
 
+        $this->requireProFeature($outlet, $user, 'retail_harga_hpp', 'Manajemen Harga Jual & HPP');
+
         $outlet->load('outletType');
         $histories = $product->priceHistories()->with('changedBy')->limit(30)->get();
 
@@ -56,6 +61,8 @@ class PriceController extends Controller
         if (!$user->hasPermission('product.edit')) {
             abort(403);
         }
+
+        $this->requireProFeature($outlet, $user, 'retail_harga_hpp', 'Manajemen Harga Jual & HPP');
 
         $data = $request->validate([
             'new_price' => ['required', 'integer', 'min:0'],

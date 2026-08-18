@@ -10,13 +10,14 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Laravel\Sanctum\HasApiTokens;
 
-#[Fillable(['name', 'email', 'password', 'role', 'role_id', 'is_active', 'phone', 'business_name', 'setup_completed_at', 'created_by'])]
+#[Fillable(['name', 'email', 'password', 'role', 'role_id', 'is_active', 'phone', 'business_name', 'setup_completed_at', 'extra_outlet_quota', 'created_by'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable implements MustVerifyEmail
 {
@@ -46,9 +47,42 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->belongsToMany(Outlet::class, 'outlet_employees');
     }
 
+    // Riwayat penuh langganan Paket Pro (satu baris per periode aktivasi).
+    public function proSubscriptions(): HasMany
+    {
+        return $this->hasMany(ProOwnerSubscription::class, 'owner_id');
+    }
+
+    // Baris langganan yang sedang berlaku (activated_at paling akhir DAN belum
+    // kadaluarsa). Owner tanpa baris sama sekali, atau baris terakhirnya sudah
+    // lewat expires_at, dianggap paket Free bawaan — tangani null di tampilan.
+    public function currentProSubscription(): HasOne
+    {
+        return $this->hasOne(ProOwnerSubscription::class, 'owner_id')
+            ->where(fn ($q) => $q->whereNull('expires_at')->orWhere('expires_at', '>', now()))
+            ->latestOfMany('activated_at');
+    }
+
+    // Paket Pro yang sedang berlaku, fallback ke paket Free bawaan kalau belum
+    // pernah redeem kode sama sekali.
+    public function currentProPlan(): ProPlan
+    {
+        return $this->currentProSubscription?->plan ?? ProPlan::where('is_default', true)->firstOrFail();
+    }
+
     public function hasCompletedSetup(): bool
     {
         return $this->role !== 'owner' || !is_null($this->setup_completed_at);
+    }
+
+    // Batas jumlah outlet efektif = batas paket + kuota tambahan khusus owner ini
+    // (extra_outlet_quota, diatur admin per-owner). null = tanpa batas (paket sudah
+    // tanpa batas, kuota tambahan jadi tidak relevan).
+    public function effectiveOutletLimit(): ?int
+    {
+        $planLimit = $this->currentProPlan()->max_outlet_types;
+
+        return $planLimit === null ? null : $planLimit + $this->extra_outlet_quota;
     }
 
     public function roleRelation(): BelongsTo

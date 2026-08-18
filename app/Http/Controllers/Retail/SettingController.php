@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Retail;
 
 use App\Http\Controllers\Controller;
 
+use App\Http\Controllers\Concerns\EnforcesProFeature;
 use App\Models\Outlet;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -12,6 +13,8 @@ use Illuminate\View\View;
 
 class SettingController extends Controller
 {
+    use EnforcesProFeature;
+
     private function authorizeOwner(Outlet $outlet): void
     {
         $user = Auth::user();
@@ -46,8 +49,12 @@ class SettingController extends Controller
             'midtrans_is_production' => ['boolean'],
         ]);
 
+        /** @var \App\Models\User $actingUser */
+        $actingUser = Auth::user();
+
         // QRIS Pay hanya bisa diubah oleh admin; non-admin preserve nilai lama
-        $enableQrisPay = Auth::user()->role === 'admin'
+        $isAdmin = $actingUser->role === 'admin';
+        $enableQrisPay = $isAdmin
             ? $request->boolean('enable_qris_pay')
             : $outlet->enable_qris_pay;
 
@@ -55,15 +62,24 @@ class SettingController extends Controller
             return back()->withErrors(['midtrans_server_key' => 'Server Key Midtrans wajib diisi untuk mengaktifkan QRIS Pay.'])->withInput();
         }
 
+        // Metode pembayaran QRIS/Kartu manual khusus paket Pro/Max — non-admin tanpa
+        // fitur ini di paketnya tidak bisa mengaktifkan, walau checkbox dikirim manual.
+        $enableQrisTransfer = $this->ownerHasProFeature($outlet, $actingUser, 'retail_payment_qris')
+            ? $request->boolean('enable_qris_transfer')
+            : false;
+        $enableCard = $this->ownerHasProFeature($outlet, $actingUser, 'retail_payment_card')
+            ? $request->boolean('enable_card')
+            : false;
+
         $outlet->update([
             'order_mode'             => $validated['order_mode'] ?? 'quick',
             'enable_opening_shift'   => $request->boolean('enable_opening_shift'),
             'enable_barcode_scanner' => $request->boolean('enable_barcode_scanner'),
             'enable_self_order'      => $request->boolean('enable_self_order'),
-            'enable_qris_transfer'   => $request->boolean('enable_qris_transfer'),
+            'enable_qris_transfer'   => $enableQrisTransfer,
             'enable_qris_pay'        => $enableQrisPay,
             'enable_transfer'        => $request->boolean('enable_transfer'),
-            'enable_card'            => $request->boolean('enable_card'),
+            'enable_card'            => $enableCard,
             'midtrans_server_key'    => $request->filled('midtrans_server_key') ? ($validated['midtrans_server_key'] ?? null) : $outlet->midtrans_server_key,
             'midtrans_client_key'    => $request->filled('midtrans_client_key') ? ($validated['midtrans_client_key'] ?? null) : $outlet->midtrans_client_key,
             'midtrans_is_production' => $request->boolean('midtrans_is_production'),

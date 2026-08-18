@@ -180,7 +180,7 @@
           </td>
           <td style="text-align:center">
             <div style="display:flex;align-items:center;justify-content:center;gap:5px">
-              @if($trackCogs && $user->hasPermission('product.edit'))
+              @if($trackCogs && $user->hasPermission('product.edit') && $canEditPrice)
               <a href="{{ $outlet->route('products.price.edit', [$product]) }}"
                 title="Ubah Harga Jual"
                 style="width:30px;height:30px;border-radius:8px;border:1px solid var(--border);background:transparent;cursor:pointer;color:#a78bfa;font-size:12px;transition:all .15s;display:grid;place-items:center"
