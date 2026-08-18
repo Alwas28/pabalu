@@ -123,21 +123,29 @@ class UserController extends Controller
 
         $unlinkedIds = $this->unlinkedEmployees()->pluck('id')->toArray();
 
+        // Role operasional (kasir/admin_outlet) WAJIB terhubung ke karyawan — nama diambil
+        // dari data karyawan, bukan diketik manual (lihat field "Cari Karyawan" di view).
+        // Admin/Pemilik Toko tidak punya konsep karyawan, tetap pakai nama manual.
+        $isEmployeeRole = in_array($request->input('role'), ['kasir', 'admin_outlet'], true);
+
         $validated = $request->validate([
-            'name'        => ['required', 'string', 'max:255'],
+            'name'        => [$isEmployeeRole ? 'nullable' : 'required', 'nullable', 'string', 'max:255'],
             'email'       => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:users'],
             'role'        => ['required', 'in:' . implode(',', $this->allowedRoles())],
             'password'    => ['required', 'confirmed', Password::defaults()],
-            'employee_id' => ['nullable', 'integer', 'in:' . implode(',', $unlinkedIds ?: [0])],
+            'employee_id' => [$isEmployeeRole ? 'required' : 'nullable', 'integer', 'in:' . implode(',', $unlinkedIds ?: [0])],
         ], [
-            'employee_id.in' => 'Karyawan tidak valid atau sudah punya akun.',
+            'employee_id.required' => 'Pilih karyawan yang akan dihubungkan ke akun ini.',
+            'employee_id.in'       => 'Karyawan tidak valid atau sudah punya akun.',
+            'name.required'        => 'Nama wajib diisi.',
         ]);
 
-        // Menghubungkan ke karyawan cuma masuk akal untuk role operasional (kasir/admin_outlet)
-        // — sama seperti batasan role di EmployeeController::createAccount().
         $employee = null;
-        if (!empty($validated['employee_id']) && in_array($validated['role'], ['kasir', 'admin_outlet'], true)) {
+        $name     = $validated['name'] ?? null;
+
+        if ($isEmployeeRole) {
             $employee = Employee::find($validated['employee_id']);
+            $name     = $employee->name;
 
             if ($employee->outlet_id) {
                 $outlet = $employee->outlet;
@@ -147,9 +155,9 @@ class UserController extends Controller
             }
         }
 
-        $user = DB::transaction(function () use ($validated, $employee) {
+        $user = DB::transaction(function () use ($validated, $employee, $name) {
             $user = User::create([
-                'name'       => $validated['name'],
+                'name'       => $name,
                 'email'      => $validated['email'],
                 'role'       => $validated['role'],
                 'password'   => Hash::make($validated['password']),

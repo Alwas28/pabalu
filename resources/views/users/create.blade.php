@@ -40,14 +40,32 @@
       </div>
       <div class="card-body" style="display:flex;flex-direction:column;gap:18px">
 
-        {{-- Nama --}}
-        <div>
+        {{-- Nama (Administrator/Pemilik Toko — tidak terhubung karyawan) --}}
+        <div id="name-field">
           <label class="f-label" for="name">Nama Lengkap <span style="color:#f87171">*</span></label>
           <input id="name" name="name" type="text" class="f-input"
             value="{{ old('name') }}"
             placeholder="Nama lengkap user..."
             autocomplete="off">
           @error('name')
+            <p style="font-size:12px;color:#f87171;margin-top:5px"><i class="fa-solid fa-circle-exclamation"></i> {{ $message }}</p>
+          @enderror
+        </div>
+
+        {{-- Cari Karyawan (Kasir/Admin Outlet — menggantikan input nama, nama & outlet
+             akun otomatis ikut data karyawan yang dipilih) --}}
+        @php
+          $selectedEmployee = $employees->firstWhere('id', (int) old('employee_id'));
+        @endphp
+        <div id="employee-search-field" style="display:none;position:relative">
+          <label class="f-label" for="employee-search">Cari Karyawan <span style="color:#f87171">*</span></label>
+          <input type="text" id="employee-search" class="f-input" autocomplete="off"
+            placeholder="Ketik nama karyawan..."
+            value="{{ $selectedEmployee->name ?? '' }}">
+          <input type="hidden" name="employee_id" id="employee_id" value="{{ old('employee_id') }}">
+          <div id="employee-results" style="display:none;position:absolute;top:100%;left:0;right:0;margin-top:4px;max-height:220px;overflow-y:auto;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.18);z-index:20"></div>
+          <p style="font-size:11px;color:var(--muted);margin-top:5px">Cuma menampilkan karyawan yang belum punya akun login. Nama &amp; akses outlet akun otomatis mengikuti data karyawan yang dipilih.</p>
+          @error('employee_id')
             <p style="font-size:12px;color:#f87171;margin-top:5px"><i class="fa-solid fa-circle-exclamation"></i> {{ $message }}</p>
           @enderror
         </div>
@@ -97,23 +115,6 @@
             @endforeach
           </div>
           @error('role')
-            <p style="font-size:12px;color:#f87171;margin-top:5px"><i class="fa-solid fa-circle-exclamation"></i> {{ $message }}</p>
-          @enderror
-        </div>
-
-        {{-- Hubungkan ke Karyawan (cuma relevan untuk Kasir/Admin Outlet) --}}
-        <div id="employee-link-field" style="display:none">
-          <label class="f-label" for="employee_id">Hubungkan ke Karyawan <span style="font-weight:400;text-transform:none;font-size:11px;color:var(--muted)">(opsional)</span></label>
-          <select id="employee_id" name="employee_id" class="f-input">
-            <option value="">— Tidak dihubungkan —</option>
-            @foreach($employees as $emp)
-            <option value="{{ $emp->id }}" {{ (string) old('employee_id') === (string) $emp->id ? 'selected' : '' }}>
-              {{ $emp->name }}{{ $emp->position ? ' — ' . $emp->position : '' }}
-            </option>
-            @endforeach
-          </select>
-          <p style="font-size:11px;color:var(--muted);margin-top:5px">Cuma menampilkan karyawan yang belum punya akun login. Kalau dipilih, outlet gajian karyawan otomatis jadi akses outlet akun ini.</p>
-          @error('employee_id')
             <p style="font-size:12px;color:#f87171;margin-top:5px"><i class="fa-solid fa-circle-exclamation"></i> {{ $message }}</p>
           @enderror
         </div>
@@ -182,15 +183,59 @@ function onRoleChange(input) {
   active.querySelector('.role-icon').style.background = 'var(--ac-lt)';
   active.querySelector('.role-icon').style.color = 'var(--ac)';
 
-  // Hubungkan-ke-karyawan cuma relevan buat role operasional (kasir/admin_outlet) —
-  // employee tidak punya konsep akun admin/owner.
-  const employeeField = document.getElementById('employee-link-field');
-  const showEmployeeField = ['kasir', 'admin_outlet'].includes(input.value);
-  employeeField.style.display = showEmployeeField ? '' : 'none';
-  if (!showEmployeeField) {
+  // Role operasional (kasir/admin_outlet) WAJIB terhubung ke data karyawan — nama
+  // diambil dari situ, jadi input Nama diganti field cari karyawan. Admin/Pemilik Toko
+  // tidak punya konsep karyawan, tetap pakai input nama manual.
+  const isEmployeeRole = ['kasir', 'admin_outlet'].includes(input.value);
+  document.getElementById('name-field').style.display = isEmployeeRole ? 'none' : '';
+  document.getElementById('employee-search-field').style.display = isEmployeeRole ? '' : 'none';
+  if (isEmployeeRole) {
+    document.getElementById('name').value = '';
+  } else {
+    document.getElementById('employee-search').value = '';
     document.getElementById('employee_id').value = '';
   }
 }
+
+const EMPLOYEES = @json($employees->map(fn ($e) => ['id' => $e->id, 'name' => $e->name, 'position' => $e->position]));
+
+function renderEmployeeResults(filter) {
+  const box = document.getElementById('employee-results');
+  const q = filter.trim().toLowerCase();
+  const matches = q === '' ? EMPLOYEES : EMPLOYEES.filter(e => e.name.toLowerCase().includes(q));
+
+  if (matches.length === 0) {
+    box.innerHTML = '<div style="padding:10px 14px;font-size:12.5px;color:var(--muted)">Tidak ada karyawan cocok / semua karyawan sudah punya akun.</div>';
+  } else {
+    box.innerHTML = matches.map(e => `
+      <div class="employee-result-item" data-id="${e.id}" data-name="${e.name.replace(/"/g, '&quot;')}"
+        style="padding:10px 14px;font-size:13px;color:var(--text);cursor:pointer;border-bottom:1px solid var(--border)">
+        ${e.name}${e.position ? ' <span style="color:var(--muted);font-size:11px">— ' + e.position + '</span>' : ''}
+      </div>
+    `).join('');
+    box.querySelectorAll('.employee-result-item').forEach(item => {
+      item.addEventListener('mouseover', () => item.style.background = 'var(--surface2)');
+      item.addEventListener('mouseout', () => item.style.background = 'transparent');
+      item.addEventListener('click', () => {
+        document.getElementById('employee-search').value = item.dataset.name;
+        document.getElementById('employee_id').value = item.dataset.id;
+        box.style.display = 'none';
+      });
+    });
+  }
+  box.style.display = '';
+}
+
+document.getElementById('employee-search').addEventListener('input', (e) => {
+  document.getElementById('employee_id').value = '';
+  renderEmployeeResults(e.target.value);
+});
+document.getElementById('employee-search').addEventListener('focus', (e) => renderEmployeeResults(e.target.value));
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('#employee-search-field')) {
+    document.getElementById('employee-results').style.display = 'none';
+  }
+});
 
 function togglePass(fieldId, iconId) {
   const f = document.getElementById(fieldId);
