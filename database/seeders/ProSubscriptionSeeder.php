@@ -183,17 +183,6 @@ class ProSubscriptionSeeder extends Seeder
             'warmak_pengeluaran', 'warmak_self_order', 'warmak_wa', 'warmak_waste',
         ];
 
-        $maxFeatures = array_values(array_unique(array_merge($proFeatures, [
-            'kafe_hapus_watermark', 'kafe_midtrans',
-            'laundry_hapus_watermark', 'laundry_midtrans',
-            'retail_hapus_watermark', 'retail_midtrans',
-            'salon_hapus_watermark', 'salon_midtrans',
-            'warmak_hapus_watermark', 'warmak_midtrans',
-            'sewa_akses_mobile', 'sewa_booking', 'sewa_export_excel', 'sewa_hapus_watermark', 'sewa_kelola_pelanggan',
-            'sewa_laporan', 'sewa_laporan_lanjutan', 'sewa_maintenance', 'sewa_midtrans', 'sewa_payment_custom',
-            'sewa_pengaturan', 'sewa_pengembalian', 'sewa_perpanjangan', 'sewa_refund', 'sewa_wa',
-        ])));
-
         return [
             [
                 'name'             => 'Free',
@@ -214,16 +203,6 @@ class ProSubscriptionSeeder extends Seeder
                 'is_active'        => true,
                 'is_default'       => false,
                 'features'         => $proFeatures,
-            ],
-            [
-                'name'             => 'Max',
-                'desc'             => 'Outlet & kasir tanpa batas, semua fitur Pro, integrasi Midtrans otomatis di semua jenis outlet, plus modul Sewa/Rental penuh.',
-                'price'            => 199000,
-                'max_outlet_types' => null,
-                'max_kasir'        => null,
-                'is_active'        => true,
-                'is_default'       => false,
-                'features'         => $maxFeatures,
             ],
         ];
     }
