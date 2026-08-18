@@ -603,9 +603,10 @@
         <i class="fa-solid fa-xmark"></i>
       </button>
     </div>
-    <form method="POST" action="{{ route('employees.account.update', $employee) }}">
+    <form method="POST" action="{{ route('employees.account.update', $employee) }}" onsubmit="return syncOutletIds(this)">
       @csrf @method('PUT')
       <input type="hidden" name="_form" value="edit_account">
+      <input type="hidden" name="outlet_ids" class="outlet-ids-hidden">
       <div style="padding:20px 22px;display:flex;flex-direction:column;gap:14px;max-height:65vh;overflow-y:auto">
         <div>
           <label class="f-label">Role / Akses <span style="color:#f87171">*</span></label>
@@ -631,7 +632,7 @@
             @forelse($ownerOutlets as $ot)
             <label style="display:flex;align-items:center;gap:10px;padding:10px 14px;{{ !$loop->last ? 'border-bottom:1px solid var(--border);' : '' }}cursor:pointer"
               onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background='transparent'">
-              <input type="checkbox" name="outlet_ids[]" value="{{ $ot->id }}"
+              <input type="checkbox" class="outlet-cb" data-outlet-id="{{ $ot->id }}"
                 style="width:16px;height:16px;accent-color:var(--ac);cursor:pointer"
                 {{ in_array($ot->id, old('outlet_ids', $currentOutletIds)) ? 'checked' : '' }}>
               <div>
@@ -674,8 +675,9 @@
         <i class="fa-solid fa-xmark"></i>
       </button>
     </div>
-    <form method="POST" action="{{ route('employees.account.create', $employee) }}">
+    <form method="POST" action="{{ route('employees.account.create', $employee) }}" onsubmit="return syncOutletIds(this)">
       @csrf
+      <input type="hidden" name="outlet_ids" class="outlet-ids-hidden">
       <div style="padding:20px 22px;display:flex;flex-direction:column;gap:14px">
         <div>
           <label class="f-label">Role / Akses <span style="color:#f87171">*</span></label>
@@ -707,7 +709,7 @@
             @forelse($ownerOutlets as $ot)
             <label style="display:flex;align-items:center;gap:10px;padding:10px 14px;{{ !$loop->last ? 'border-bottom:1px solid var(--border);' : '' }}cursor:pointer"
               onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background='transparent'">
-              <input type="checkbox" name="outlet_ids[]" value="{{ $ot->id }}"
+              <input type="checkbox" class="outlet-cb" data-outlet-id="{{ $ot->id }}"
                 style="width:16px;height:16px;accent-color:var(--ac);cursor:pointer"
                 {{ in_array($ot->id, old('outlet_ids', [])) ? 'checked' : '' }}>
               <div>
@@ -753,6 +755,15 @@ function switchSalaryTab(tab) {
       btn.style.boxShadow  = 'none';
     }
   });
+}
+
+// Checkbox outlet TIDAK punya `name` (hindari pola "outlet_ids[]" yang kena blokir WAF
+// hosting) — nilai yang dicentang digabung jadi string "1,2,3" ke input hidden ini
+// tepat sebelum form dikirim.
+function syncOutletIds(form) {
+  const ids = Array.from(form.querySelectorAll('.outlet-cb:checked')).map(cb => cb.dataset.outletId);
+  form.querySelector('.outlet-ids-hidden').value = ids.join(',');
+  return true;
 }
 
 document.addEventListener('DOMContentLoaded', () => {

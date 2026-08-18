@@ -379,6 +379,14 @@ class EmployeeController extends Controller
         $outlets = $this->ownerOutlets();
         $outletIds = $outlets->pluck('id')->toArray();
 
+        // outlet_ids dikirim sebagai string "1,2,3" (bukan outlet_ids[] array) supaya
+        // tidak kena blokir WAF hosting yang menganggap nama field berkurung siku
+        // sebagai indikasi parameter injection — di-parse balik jadi array di sini
+        // supaya sisa validasi & logika di bawah tidak berubah sama sekali.
+        $request->merge([
+            'outlet_ids' => array_values(array_filter(array_map('intval', explode(',', (string) $request->input('outlet_ids'))))),
+        ]);
+
         $data = $request->validate([
             'email'        => ['required', 'email', 'max:150', 'unique:users,email,' . $user->id],
             'password'     => ['nullable', 'string', 'min:6'],
@@ -426,6 +434,11 @@ class EmployeeController extends Controller
 
         $outlets = $this->ownerOutlets();
         $outletIds = $outlets->pluck('id')->toArray();
+
+        // Lihat catatan di updateAccount() — outlet_ids dikirim sebagai string "1,2,3".
+        $request->merge([
+            'outlet_ids' => array_values(array_filter(array_map('intval', explode(',', (string) $request->input('outlet_ids'))))),
+        ]);
 
         $data = $request->validate([
             'email'        => ['required', 'email', 'max:150', 'unique:users,email'],
