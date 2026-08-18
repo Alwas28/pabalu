@@ -662,16 +662,7 @@ select.f-input option{background:var(--surface2);color:var(--text)}
     </div>
 
     <div style="display:flex;align-items:center;gap:10px">
-      {{-- Period selector (admin only — dihilangkan untuk owner) --}}
-      @if(!$isKasir && !$isOwner)
-      <select class="f-input" style="width:auto;padding:7px 12px;font-size:12.5px">
-        <option>Juni 2026</option>
-        <option>Mei 2026</option>
-        <option>April 2026</option>
-        <option>Maret 2026</option>
-      </select>
-      @endif
-
+     
       {{-- Notification --}}
       <button onclick="showToast('info','3 notifikasi baru')"
         style="position:relative;width:38px;height:38px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);cursor:pointer;color:var(--sub);font-size:14px;transition:color .15s"
