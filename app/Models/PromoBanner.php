@@ -5,8 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 
-#[Fillable(['title', 'slug', 'image', 'content', 'meta_title', 'meta_description', 'is_active', 'footer_group'])]
-class Page extends Model
+#[Fillable(['image', 'badge', 'title', 'button_text', 'button_url', 'sort_order', 'is_active'])]
+class PromoBanner extends Model
 {
     protected function casts(): array
     {

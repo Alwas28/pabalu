@@ -24,6 +24,9 @@
     <a href="{{ route('settings.categories') }}" class="settings-tab {{ $tab === 'categories' ? 'active' : '' }}">
       <i class="fa-solid fa-tags"></i> Kategori
     </a>
+    <a href="{{ route('settings.promo') }}" class="settings-tab {{ $tab === 'promo' ? 'active' : '' }}">
+      <i class="fa-solid fa-bullhorn"></i> Iklan/Promo
+    </a>
   </div>
 
   {{-- Konten tab --}}
@@ -34,6 +37,8 @@
       @include('settings.tabs.menu')
     @elseif($tab === 'categories')
       @include('settings.tabs.categories')
+    @elseif($tab === 'promo')
+      @include('settings.tabs.promo')
     @endif
   </div>
 

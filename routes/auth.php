@@ -9,6 +9,7 @@ use App\Http\Controllers\Auth\PasswordController;
 use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Auth\VerifyEmailController;
+use App\Http\Controllers\Auth\WhatsAppVerificationController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function () {
@@ -42,6 +43,14 @@ Route::middleware('auth')->group(function () {
     Route::post('email/verification-notification', [EmailVerificationNotificationController::class, 'store'])
         ->middleware('throttle:6,1')
         ->name('verification.send');
+
+    Route::post('verify-whatsapp', [WhatsAppVerificationController::class, 'verify'])
+        ->middleware('throttle:10,1')
+        ->name('verification.whatsapp.verify');
+
+    Route::post('verify-whatsapp/resend', [WhatsAppVerificationController::class, 'resend'])
+        ->middleware('throttle:6,1')
+        ->name('verification.whatsapp.resend');
 });
 
 // Verifikasi email bisa diakses tanpa login — auto-login setelah verifikasi

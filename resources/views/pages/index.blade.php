@@ -44,7 +44,12 @@
             </div>
             @endif
           </td>
-          <td class="td-main">{{ $page->title }}</td>
+          <td class="td-main">
+            {{ $page->title }}
+            @if($page->footer_group)
+            <span class="badge badge-gray" style="margin-left:6px;font-size:10px">Footer: {{ $page->footer_group === 'perusahaan' ? 'Perusahaan' : 'Bantuan' }}</span>
+            @endif
+          </td>
           <td>
             <span style="font-size:12px;font-family:monospace;color:var(--sub)">/halaman/{{ $page->slug }}</span>
           </td>

@@ -18,7 +18,7 @@ use Illuminate\Support\Facades\DB;
 use Laravel\Sanctum\HasApiTokens;
 
 #[Fillable(['name', 'email', 'password', 'role', 'role_id', 'is_active', 'phone', 'business_name', 'setup_completed_at', 'extra_outlet_quota', 'created_by'])]
-#[Hidden(['password', 'remember_token'])]
+#[Hidden(['password', 'remember_token', 'wa_verification_code'])]
 class User extends Authenticatable implements MustVerifyEmail
 {
     /** @use HasFactory<UserFactory> */
@@ -30,11 +30,21 @@ class User extends Authenticatable implements MustVerifyEmail
     protected function casts(): array
     {
         return [
-            'email_verified_at'   => 'datetime',
-            'password'            => 'hashed',
-            'is_active'           => 'boolean',
-            'setup_completed_at'  => 'datetime',
+            'email_verified_at'          => 'datetime',
+            'password'                   => 'hashed',
+            'is_active'                  => 'boolean',
+            'setup_completed_at'         => 'datetime',
+            'wa_verification_expires_at' => 'datetime',
         ];
+    }
+
+    // Ada kode OTP WhatsApp yang belum dipakai & belum kedaluwarsa — dipakai halaman
+    // prompt verifikasi buat memutuskan tampilkan form isi-kode atau tidak.
+    public function hasPendingWaVerification(): bool
+    {
+        return $this->wa_verification_code !== null
+            && $this->wa_verification_expires_at !== null
+            && $this->wa_verification_expires_at->isFuture();
     }
 
     public function outlets(): HasMany

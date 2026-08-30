@@ -69,7 +69,32 @@ Route::get('/', function () {
         ->limit(10)
         ->get();
 
-    return view('welcome', compact('partners', 'outletTypes', 'featuredProducts', 'registeredOutlets', 'sliders', 'featuredCategories', 'featuredCategoryProducts'));
+    $promoBanners = \App\Models\PromoBanner::where('is_active', true)
+        ->orderBy('sort_order')
+        ->orderBy('id')
+        ->get();
+
+    // Produk terlaris ASLI (bukan contoh) — dihitung dari total qty terjual lintas
+    // seluruh transaksi selesai, bukan cuma "hari ini" (platform masih baru, data
+    // per-hari terlalu tipis buat jadi ranking yang berarti).
+    $bestSellerIds = \App\Models\TransactionItem::query()
+        ->select('product_id')
+        ->selectRaw('SUM(qty) as total_qty')
+        ->whereNotNull('product_id')
+        ->whereHas('transaction', fn ($q) => $q->where('status', 'completed'))
+        ->groupBy('product_id')
+        ->orderByDesc('total_qty')
+        ->limit(4)
+        ->pluck('product_id');
+
+    $bestSellers = \App\Models\Product::whereIn('id', $bestSellerIds)
+        ->where('is_active', true)
+        ->with('outlet.outletType', 'category')
+        ->get()
+        ->sortBy(fn ($p) => array_search($p->id, $bestSellerIds->all()))
+        ->values();
+
+    return view('welcome', compact('partners', 'outletTypes', 'featuredProducts', 'registeredOutlets', 'sliders', 'featuredCategories', 'featuredCategoryProducts', 'promoBanners', 'bestSellers'));
 });
 
 // ── Halaman statis (CMS pages, publik) ──────────────────────────────────────
@@ -642,18 +667,25 @@ Route::middleware(['auth', 'verified', 'require.setup'])->group(function () use 
     Route::resource('pages', \App\Http\Controllers\PageController::class)->except(['show']);
     Route::post('pages/{page}/toggle-active', [\App\Http\Controllers\PageController::class, 'toggleActive'])->name('pages.toggle-active');
 
-    // Pengaturan Homepage (admin only) — tab Header (slider), Menu & Kategori
+    // Pengaturan Homepage (admin only) — tab Header (slider), Menu, Kategori & Iklan/Promo
     Route::prefix('pengaturan')->name('settings.')->group(function () {
         Route::get('/', [\App\Http\Controllers\HomepageSettingController::class, 'index'])->name('index');
         Route::get('header', [\App\Http\Controllers\HomepageSettingController::class, 'header'])->name('header');
         Route::get('menu', [\App\Http\Controllers\HomepageSettingController::class, 'menu'])->name('menu');
         Route::get('kategori', [\App\Http\Controllers\HomepageSettingController::class, 'categories'])->name('categories');
+        Route::get('iklan', [\App\Http\Controllers\HomepageSettingController::class, 'promo'])->name('promo');
     });
     Route::prefix('pengaturan/header/sliders')->name('sliders.')->group(function () {
         Route::post('/', [\App\Http\Controllers\HomeSliderController::class, 'store'])->name('store');
         Route::match(['put', 'patch'], '{slider}', [\App\Http\Controllers\HomeSliderController::class, 'update'])->name('update');
         Route::delete('{slider}', [\App\Http\Controllers\HomeSliderController::class, 'destroy'])->name('destroy');
         Route::post('{slider}/toggle-active', [\App\Http\Controllers\HomeSliderController::class, 'toggleActive'])->name('toggle-active');
+    });
+    Route::prefix('pengaturan/iklan/banners')->name('promo-banners.')->group(function () {
+        Route::post('/', [\App\Http\Controllers\PromoBannerController::class, 'store'])->name('store');
+        Route::match(['put', 'patch'], '{promoBanner}', [\App\Http\Controllers\PromoBannerController::class, 'update'])->name('update');
+        Route::delete('{promoBanner}', [\App\Http\Controllers\PromoBannerController::class, 'destroy'])->name('destroy');
+        Route::post('{promoBanner}/toggle-active', [\App\Http\Controllers\PromoBannerController::class, 'toggleActive'])->name('toggle-active');
     });
     Route::prefix('pengaturan/menu/items')->name('home-menus.')->group(function () {
         Route::post('/', [\App\Http\Controllers\HomeMenuController::class, 'store'])->name('store');
@@ -714,9 +746,11 @@ Route::middleware(['auth', 'verified', 'require.setup'])->group(function () use 
     Route::post('langganan/aktivasi', [\App\Http\Controllers\ProSubscriptionController::class, 'redeem'])->name('pro.subscription.redeem');
     Route::post('langganan/aktifkan/{plan}', [\App\Http\Controllers\ProSubscriptionController::class, 'activate'])->name('pro.subscription.activate');
 
-    // Pengaturan Sistem (admin only) — zona waktu aplikasi
+    // Pengaturan Sistem (admin only) — zona waktu aplikasi, gateway WhatsApp (OTP)
     Route::get('pengaturan-sistem', [\App\Http\Controllers\SystemSettingController::class, 'edit'])->name('system-settings.edit');
     Route::put('pengaturan-sistem', [\App\Http\Controllers\SystemSettingController::class, 'update'])->name('system-settings.update');
+    Route::put('pengaturan-sistem/whatsapp', [\App\Http\Controllers\SystemSettingController::class, 'updateWhatsapp'])->name('system-settings.whatsapp.update');
+    Route::post('pengaturan-sistem/whatsapp/test', [\App\Http\Controllers\SystemSettingController::class, 'testWhatsapp'])->name('system-settings.whatsapp.test');
 
     // Wilayah Indonesia (admin only)
     Route::prefix('wilayah')->name('wilayah.')->group(function () {

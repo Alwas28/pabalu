@@ -139,14 +139,12 @@
         <img class="slide-bg" src="{{ asset('storage/' . $slide->image) }}" alt="{{ $slide->title }}">
       </div>
       @empty
-      <div class="slide active" onclick="openSlideModal(0)"
-        data-image="https://loremflickr.com/1200/600/mobile,app,delivery"
-        data-badge="Aplikasi Belanja No. 1 di Sultra"
-        data-title="Belanja Segar Kini Lebih Mudah dengan Pabalu"
-        data-desc="Ribuan produk kebutuhan harian, harga bersaing, dan pengantaran cepat langsung dari aplikasi Pabalu."
-        data-btn-text="Selengkapnya"
-        data-btn-url="#">
-        <img class="slide-bg" src="https://loremflickr.com/1200/600/mobile,app,delivery" alt="Aplikasi Pabalu">
+      <div class="slide active" style="background:var(--green-900);display:flex;align-items:center;justify-content:center;cursor:default" onclick="event.stopPropagation()">
+        <div style="text-align:center;color:#fff;padding:24px">
+          <img src="/img/logo-pabalu.png" alt="Pabalu" style="width:64px;height:64px;object-fit:contain;margin:0 auto 14px">
+          <h2 style="font-size:20px;font-weight:800;margin-bottom:8px">Selamat Datang di Pabalu</h2>
+          <p style="font-size:13px;opacity:.85;max-width:420px;margin:0 auto">Platform kasir & marketplace untuk UMKM — banner promo di sini akan tampil begitu admin menambahkannya.</p>
+        </div>
       </div>
       @endforelse
       <div class="slider-dots" id="dots"></div>
@@ -226,105 +224,116 @@
   </div>
 </section>
 
-<!-- PROMO BANNERS -->
+<!-- PROMO BANNERS (dikelola admin: Pengaturan Homepage > Iklan/Promo) -->
+@if($promoBanners->isNotEmpty())
 <section class="section" style="padding-top:0;">
   <div class="container">
     <div class="promo-row">
+      @foreach($promoBanners as $banner)
       <div class="promo-banner">
-        <img src="https://loremflickr.com/700/300/vegetables,fruit,market" alt="Buah Sayur">
+        <img src="{{ asset('storage/' . $banner->image) }}" alt="{{ $banner->title }}">
         <div class="promo-content">
-          <div class="off">Hemat hingga 30%</div>
-          <h3>Buah & Sayur Segar</h3>
-          <a href="#" class="btn-light">Belanja Sekarang</a>
+          @if($banner->badge)
+          <div class="off">{{ $banner->badge }}</div>
+          @endif
+          <h3>{{ $banner->title }}</h3>
+          @if($banner->button_text)
+          <a href="{{ $banner->button_url ?: '#' }}" class="btn-light">{{ $banner->button_text }}</a>
+          @endif
         </div>
       </div>
-      <div class="promo-banner">
-        <img src="https://loremflickr.com/700/300/bakery,bread,basket" alt="Roti">
-        <div class="promo-content">
-          <div class="off">Hemat hingga 25%</div>
-          <h3>Roti Panggang Segar</h3>
-          <a href="#" class="btn-light">Belanja Sekarang</a>
-        </div>
-      </div>
+      @endforeach
     </div>
   </div>
 </section>
+@endif
+
+@php
+  // Link produk publik: cuma outlet fnb (menu) & retail (katalog) yang punya halaman
+  // publik saat ini — sama aturan yang dipakai section "Kategori Pilihan" di atas.
+  $productLink = function ($product) {
+    $outlet = $product->outlet;
+    if (!$outlet) return null;
+    return match ($outlet->rp()) {
+      'fnb'    => route('public.menu', $outlet->code),
+      'retail' => route('public.katalog', $outlet->code),
+      default  => null,
+    };
+  };
+@endphp
 
 <!-- POPULAR PRODUCTS -->
+@if($featuredProducts->isNotEmpty())
 <section class="section">
   <div class="container">
     <div class="sec-head"><h2>Produk Populer</h2></div>
-    <div class="prod-grid" id="popularGrid"></div>
-  </div>
-</section>
-
-<!-- DAILY BEST SELLS -->
-<section class="section">
-  <div class="container">
-    <div class="sec-head"><h2>Terlaris Hari Ini</h2></div>
-    <div class="best-grid">
-      <div class="best-feature">
-        <img src="https://loremflickr.com/400/400/coffee,beans" alt="Kopi Organik">
-        <div class="content">
-          <h3>100% Biji Kopi Organik. Dapatkan penawaran terbaik sebelum kehabisan.</h3>
-          <a href="#" class="btn-primary">Belanja Sekarang →</a>
+    <div class="prod-grid">
+      @foreach($featuredProducts as $product)
+      @php $link = $productLink($product); @endphp
+      <a href="{{ $link ?: '#' }}" class="prod-card" @if(!$link) onclick="event.preventDefault()" style="cursor:default" @endif>
+        <div class="prod-img">
+          @if($product->image)
+          <img src="{{ asset('storage/' . $product->image) }}" alt="{{ $product->name }}">
+          @else
+          <i class="fa-solid fa-image" style="font-size:22px;color:var(--line)"></i>
+          @endif
         </div>
-      </div>
-      <div class="prod-card">
-        <div class="prod-img"><img src="https://loremflickr.com/220/160/coffee,ground" alt="Kopi Bubuk"></div>
-        <div class="prod-cat">Teh, Kopi & Minuman</div>
-        <div class="prod-name">Kopi Bubuk Panggang</div>
-        <div class="prod-rating">★★★★☆ <em>4.5</em></div>
-        <div class="prod-bottom"><div class="prod-price">Rp13k <del>Rp18k</del></div><button class="add-btn">+ Add</button></div>
-      </div>
-      <div class="prod-card">
-        <div class="prod-img"><img src="https://loremflickr.com/220/160/tomato,can" alt="Tomat Kalengan"></div>
-        <div class="prod-cat">Buah & Sayur</div>
-        <div class="prod-name">Tomat Hancur Kalengan</div>
-        <div class="prod-rating">★★★★☆ <em>4.5</em></div>
-        <div class="prod-bottom"><div class="prod-price">Rp13k <del>Rp18k</del></div><button class="add-btn">+ Add</button></div>
-      </div>
-      <div class="prod-card">
-        <div class="prod-img"><img src="https://loremflickr.com/220/160/pineapple,fruit" alt="Nanas"></div>
-        <div class="prod-cat">Buah & Sayur</div>
-        <div class="prod-name">Nanas Emas Segar</div>
-        <div class="prod-rating">★★★★☆ <em>4.5</em></div>
-        <div class="prod-bottom"><div class="prod-price">Rp13k <del>Rp18k</del></div><button class="add-btn">+ Add</button></div>
-      </div>
+        <div class="prod-cat">{{ $product->category->name ?? $product->outlet->outletType->name ?? '' }}</div>
+        <div class="prod-name">{{ $product->name }}</div>
+        <div class="prod-bottom">
+          <div class="prod-price">Rp {{ number_format($product->price) }}</div>
+          <span style="font-size:10px;color:var(--ink-soft)"><i class="fa-solid fa-shop" style="font-size:9px;margin-right:3px"></i>{{ $product->outlet->name ?? '' }}</span>
+        </div>
+      </a>
+      @endforeach
     </div>
   </div>
 </section>
+@endif
+
+<!-- PRODUK TERLARIS (dihitung dari total qty terjual sungguhan, bukan contoh) -->
+@if($bestSellers->isNotEmpty())
+<section class="section">
+  <div class="container">
+    <div class="sec-head"><h2>Produk Terlaris</h2></div>
+    <div class="best-grid">
+      @foreach($bestSellers as $i => $product)
+      @php $link = $productLink($product); @endphp
+      @if($i === 0)
+      <a href="{{ $link ?: '#' }}" class="best-feature" @if(!$link) onclick="event.preventDefault()" style="cursor:default" @endif>
+        @if($product->image)
+        <img src="{{ asset('storage/' . $product->image) }}" alt="{{ $product->name }}">
+        @endif
+        <div class="content">
+          <h3>{{ $product->name }} — produk terlaris di {{ $product->outlet->name ?? 'Pabalu' }}.</h3>
+          <span class="btn-primary">Lihat Produk →</span>
+        </div>
+      </a>
+      @else
+      <a href="{{ $link ?: '#' }}" class="prod-card" @if(!$link) onclick="event.preventDefault()" style="cursor:default" @endif>
+        <div class="prod-img">
+          @if($product->image)
+          <img src="{{ asset('storage/' . $product->image) }}" alt="{{ $product->name }}">
+          @else
+          <i class="fa-solid fa-image" style="font-size:22px;color:var(--line)"></i>
+          @endif
+        </div>
+        <div class="prod-cat">{{ $product->category->name ?? $product->outlet->outletType->name ?? '' }}</div>
+        <div class="prod-name">{{ $product->name }}</div>
+        <div class="prod-bottom">
+          <div class="prod-price">Rp {{ number_format($product->price) }}</div>
+          <span style="font-size:10px;color:var(--ink-soft)"><i class="fa-solid fa-shop" style="font-size:9px;margin-right:3px"></i>{{ $product->outlet->name ?? '' }}</span>
+        </div>
+      </a>
+      @endif
+      @endforeach
+    </div>
+  </div>
+</section>
+@endif
 
 @push('scripts')
 <script>
-  // ---- Popular products data ----
-  const products = [
-    {tag:'Sale',img:'rice,bag',cat:'Snack & Cemilan',name:"Sev Bhujia Haldiram's",rating:'4.5 (149)',price:'Rp18k',old:'Rp24k'},
-    {tag:'14%',img:'biscuit,pack',cat:'Roti & Biskuit',name:'NutriChoice Digestive',rating:'4.5 (215)',price:'Rp24k',old:''},
-    {tag:'',img:'chocolate,bar',cat:'Roti & Biskuit',name:'Cadbury 5 Star Cokelat',rating:'5 (469)',price:'Rp32k',old:'Rp36k'},
-    {tag:'',img:'chips,potato',cat:'Snack & Cemilan',name:'Keripik Kentang Original',rating:'3.5 (456)',price:'Rp5k',old:'Rp6k'},
-    {tag:'Hot',img:'popcorn,snack',cat:'Makanan Instan',name:'Popcorn Instan Asin',rating:'4.5 (38)',price:'Rp13k',old:'Rp18k'},
-    {tag:'Sale',img:'yogurt,berry',cat:'Susu & Telur',name:'Yogurt Blueberry',rating:'4.5 (160)',price:'Rp18k',old:'Rp24k'},
-    {tag:'',img:'cheese,slice',cat:'Susu & Telur',name:'Keju Lembaran Britannia',rating:'5 (345)',price:'Rp24k',old:''},
-    {tag:'',img:'cornflakes,cereal',cat:'Makanan Instan',name:"Kellogg's Cereal Original",rating:'4 (90)',price:'Rp32k',old:'Rp35k'},
-    {tag:'',img:'millet,chocolate',cat:'Snack & Cemilan',name:'Cokelat Millet Slurrp',rating:'4.5 (87)',price:'Rp5k',old:'Rp6k'},
-    {tag:'',img:'butter,dairy',cat:'Susu & Telur',name:'Mentega Amul 500g',rating:'3.5 (89)',price:'Rp13k',old:'Rp48k'},
-  ];
-  const grid = document.getElementById('popularGrid');
-  grid.innerHTML = products.map(p => `
-    <div class="prod-card">
-      ${p.tag ? `<div class="prod-tag ${p.tag==='Hot'?'hot':p.tag==='14%'?'new':''}">${p.tag}</div>` : ''}
-      <div class="prod-img"><img src="https://loremflickr.com/220/160/${p.img}" alt="${p.name}"></div>
-      <div class="prod-cat">${p.cat}</div>
-      <div class="prod-name">${p.name}</div>
-      <div class="prod-rating">★★★★☆ <em>${p.rating}</em></div>
-      <div class="prod-bottom">
-        <div class="prod-price">${p.price} ${p.old ? `<del>${p.old}</del>` : ''}</div>
-        <button class="add-btn">+ Add</button>
-      </div>
-    </div>
-  `).join('');
-
   // ---- Hero slider ----
   const slides = document.querySelectorAll('.slide');
   const dotsWrap = document.getElementById('dots');

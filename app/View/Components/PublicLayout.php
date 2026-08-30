@@ -5,6 +5,7 @@ namespace App\View\Components;
 use App\Models\HomeCategory;
 use App\Models\HomeMenu;
 use App\Models\OutletType;
+use App\Models\Page;
 use Illuminate\Contracts\View\View;
 use Illuminate\View\Component;
 
@@ -13,6 +14,8 @@ class PublicLayout extends Component
     public $homeMenus;
     public $searchOutletTypes;
     public $homeCategories;
+    public $footerCompanyPages;
+    public $footerHelpPages;
 
     public function __construct(
         public ?string $title = null,
@@ -34,6 +37,18 @@ class PublicLayout extends Component
         $this->homeCategories = HomeCategory::where('is_active', true)
             ->orderBy('sort_order')
             ->orderBy('name')
+            ->get();
+
+        // Link footer "Perusahaan"/"Bantuan" — diambil dari Halaman CMS yang ditandai
+        // admin (lihat field "Tampil di Footer" di form Halaman), bukan hardcode "#".
+        $this->footerCompanyPages = Page::where('is_active', true)
+            ->where('footer_group', 'perusahaan')
+            ->orderBy('title')
+            ->get();
+
+        $this->footerHelpPages = Page::where('is_active', true)
+            ->where('footer_group', 'bantuan')
+            ->orderBy('title')
             ->get();
     }
 

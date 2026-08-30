@@ -47,6 +47,7 @@ class PageController extends Controller
             'content'           => ['nullable', 'string'],
             'meta_title'        => ['nullable', 'string', 'max:200'],
             'meta_description'  => ['nullable', 'string', 'max:255'],
+            'footer_group'      => ['nullable', 'in:perusahaan,bantuan'],
         ]);
 
         $slug = $data['slug'] ?: Str::slug($data['title']);
@@ -60,6 +61,7 @@ class PageController extends Controller
             'meta_title'        => $data['meta_title'] ?: $data['title'],
             'meta_description'  => $data['meta_description'] ?? null,
             'is_active'         => $request->boolean('is_active'),
+            'footer_group'      => $data['footer_group'] ?: null,
         ]);
 
         return redirect()->route('pages.edit', $page)->with('success', "Halaman \"{$page->title}\" berhasil dibuat.");
@@ -83,6 +85,7 @@ class PageController extends Controller
             'content'           => ['nullable', 'string'],
             'meta_title'        => ['nullable', 'string', 'max:200'],
             'meta_description'  => ['nullable', 'string', 'max:255'],
+            'footer_group'      => ['nullable', 'in:perusahaan,bantuan'],
         ]);
 
         $slug = $data['slug'] ?: Str::slug($data['title']);
@@ -97,6 +100,7 @@ class PageController extends Controller
             'meta_title'        => $data['meta_title'] ?: $data['title'],
             'meta_description'  => $data['meta_description'] ?? null,
             'is_active'         => $request->boolean('is_active'),
+            'footer_group'      => $data['footer_group'] ?: null,
         ];
 
         if ($request->hasFile('image')) {

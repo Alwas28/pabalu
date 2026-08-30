@@ -1,0 +1,34 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+// Banner promo kecil di homepage publik (mis. "Buah & Sayur Segar — Hemat hingga
+// 30%") — sebelumnya hardcode di welcome.blade.php pakai gambar loremflickr,
+// sekarang dikelola admin lewat menu Pengaturan Homepage > Iklan/Promo, sama
+// polanya dengan HomeSlider (header carousel).
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('promo_banners', function (Blueprint $table) {
+            $table->id();
+            $table->string('image');
+            $table->string('badge', 100)->nullable();
+            $table->string('title', 200);
+            $table->string('button_text', 60)->nullable();
+            $table->string('button_url', 255)->nullable();
+            $table->unsignedSmallInteger('sort_order')->default(0);
+            $table->boolean('is_active')->default(true);
+            $table->timestamps();
+
+            $table->index(['is_active', 'sort_order']);
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('promo_banners');
+    }
+};

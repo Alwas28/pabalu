@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\WhatsApp\WhatsAppVerificationService;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -46,7 +47,15 @@ class RegisteredUserController extends Controller
             'role'     => 'owner',
         ]);
 
-        event(new Registered($user));
+        // Coba kirim kode verifikasi lewat WhatsApp dulu — kalau gateway belum
+        // dikonfigurasi/nonaktif atau pengiriman gagal, event Registered tetap
+        // di-fire supaya listener bawaan Laravel kirim link verifikasi ke email
+        // seperti biasa. Jangan pernah kirim KEDUANYA sekaligus.
+        $sentViaWhatsApp = app(WhatsAppVerificationService::class)->sendCode($user);
+
+        if (!$sentViaWhatsApp) {
+            event(new Registered($user));
+        }
 
         Auth::login($user);
 

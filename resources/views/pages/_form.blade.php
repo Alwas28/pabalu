@@ -69,6 +69,16 @@
         <div style="font-size:11.5px;color:var(--muted)">Kalau nonaktif, halaman tidak ditampilkan ke publik (hanya admin yang bisa preview)</div>
       </div>
     </label>
+
+    <div style="margin-top:14px">
+      <label class="f-label">Tampil di Footer</label>
+      <select name="footer_group" class="f-input">
+        <option value="" {{ old('footer_group', $page->footer_group ?? '') === '' ? 'selected' : '' }}>Tidak ditampilkan di footer</option>
+        <option value="perusahaan" {{ old('footer_group', $page->footer_group ?? '') === 'perusahaan' ? 'selected' : '' }}>Kolom "Perusahaan"</option>
+        <option value="bantuan" {{ old('footer_group', $page->footer_group ?? '') === 'bantuan' ? 'selected' : '' }}>Kolom "Bantuan"</option>
+      </select>
+      <p style="font-size:11px;color:var(--muted);margin-top:5px">Menentukan link halaman ini muncul di kolom mana pada footer homepage.</p>
+    </div>
   </div>
 </div>
 

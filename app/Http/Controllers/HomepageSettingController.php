@@ -6,6 +6,7 @@ use App\Models\Category;
 use App\Models\HomeCategory;
 use App\Models\HomeMenu;
 use App\Models\HomeSlider;
+use App\Models\PromoBanner;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
@@ -70,5 +71,14 @@ class HomepageSettingController extends Controller
             'homeCategories' => $homeCategories,
             'categoriesByType' => $categoriesByType,
         ]);
+    }
+
+    public function promo(): View
+    {
+        $this->authorizeAdmin();
+
+        $promoBanners = PromoBanner::orderBy('sort_order')->orderBy('id')->get();
+
+        return view('settings.index', ['tab' => 'promo', 'promoBanners' => $promoBanners]);
     }
 }

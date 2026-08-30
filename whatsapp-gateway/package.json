@@ -1,0 +1,17 @@
+{
+  "name": "pabalu-whatsapp-gateway",
+  "version": "1.0.0",
+  "description": "Service self-host pengirim WhatsApp (Baileys) untuk kode verifikasi Pabalu — dipanggil dari Laravel lewat HTTP, bukan dipanggil langsung dari browser.",
+  "private": true,
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@whiskeysockets/baileys": "^6.7.9",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "pino": "^9.3.2",
+    "qrcode-terminal": "^0.12.0"
+  }
+}

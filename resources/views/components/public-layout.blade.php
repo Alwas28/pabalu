@@ -247,25 +247,6 @@
         <input type="text" name="q" value="{{ request('q') }}" placeholder="Cari produk kebutuhan harianmu...">
         <button type="submit">🔍</button>
       </form>
-      <div class="loc-wrap" id="locWrap">
-        <button type="button" class="loc-pill" id="locBtn">📍 <strong id="locLabel">Semua Wilayah</strong><span class="car">▾</span></button>
-        <div class="loc-dropdown" id="locDropdown">
-          <button type="button" class="active">Semua Wilayah</button>
-          <button type="button">Kendari</button>
-          <button type="button">Konawe</button>
-          <button type="button">Konawe Utara (Konut)</button>
-          <button type="button">Konawe Selatan (Konsel)</button>
-          <button type="button">Konawe Kepulauan</button>
-          <button type="button">Kolaka</button>
-          <button type="button">Kolaka Utara</button>
-          <button type="button">Kolaka Timur</button>
-          <button type="button">Bombana</button>
-          <button type="button">Buton</button>
-          <button type="button">Muna</button>
-          <button type="button">Wakatobi</button>
-          <button type="button">Baubau</button>
-        </div>
-      </div>
       <div class="header-icons">
         @auth
           <a href="{{ route('dashboard') }}" class="btn-signup">Dashboard</a>
@@ -372,18 +353,36 @@
         <a href="{{ url('/') }}" class="brand" style="color:#fff;font-size:20px;"><img class="brand-logo" src="/img/logo-pabalu.png" alt="Logo Pabalu"> Pabalu</a>
         <p style="font-size:13px;margin-top:12px;opacity:.75;line-height:1.6;max-width:280px;">Belanja kebutuhan harianmu jadi lebih mudah, segar, dan cepat sampai — hanya di Pabalu.</p>
       </div>
+      @if($footerCompanyPages->isNotEmpty())
       <div>
         <h4>Perusahaan</h4>
-        <ul><li><a href="#">Tentang Kami</a></li><li><a href="#">Karir</a></li><li><a href="#">Blog</a></li><li><a href="#">Kontak</a></li></ul>
+        <ul>
+          @foreach($footerCompanyPages as $fp)
+          <li><a href="{{ route('pages.show', $fp->slug) }}">{{ $fp->title }}</a></li>
+          @endforeach
+        </ul>
       </div>
+      @endif
+      @if($footerHelpPages->isNotEmpty())
       <div>
         <h4>Bantuan</h4>
-        <ul><li><a href="#">Pusat Bantuan</a></li><li><a href="#">Lacak Pesanan</a></li><li><a href="#">Pengembalian</a></li><li><a href="#">FAQ</a></li></ul>
+        <ul>
+          @foreach($footerHelpPages as $fp)
+          <li><a href="{{ route('pages.show', $fp->slug) }}">{{ $fp->title }}</a></li>
+          @endforeach
+        </ul>
       </div>
+      @endif
+      @if($homeCategories->isNotEmpty())
       <div>
         <h4>Kategori</h4>
-        <ul><li><a href="#">Buah & Sayur</a></li><li><a href="#">Sembako</a></li><li><a href="#">Minuman</a></li><li><a href="#">Roti & Kue</a></li></ul>
+        <ul>
+          @foreach($homeCategories->take(6) as $hcat)
+          <li><a href="{{ route('home-categories.show', $hcat) }}">{{ $hcat->name }}</a></li>
+          @endforeach
+        </ul>
       </div>
+      @endif
     </div>
     <div class="foot-bottom">© {{ date('Y') }} Pabalu. Semua hak cipta dilindungi.</div>
   </div>
@@ -397,26 +396,6 @@
 </a>
 
 <script>
-  // ---- Location dropdown ----
-  const locWrap = document.getElementById('locWrap');
-  const locBtn = document.getElementById('locBtn');
-  const locLabel = document.getElementById('locLabel');
-  const locButtons = document.querySelectorAll('.loc-dropdown button');
-  locBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    locWrap.classList.toggle('open');
-  });
-  locButtons.forEach(btn => {
-    btn.addEventListener('click', () => {
-      locButtons.forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      locLabel.textContent = btn.textContent;
-      locWrap.classList.remove('open');
-    });
-  });
-  document.addEventListener('click', (e) => {
-    if (!locWrap.contains(e.target)) locWrap.classList.remove('open');
-  });
 
   // ---- Mobile drawer ----
   const drawer = document.getElementById('drawer');
