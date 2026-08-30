@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Auth;
 
+use App\Rules\Turnstile;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -30,6 +31,14 @@ class LoginRequest extends FormRequest
         return [
             'email' => ['required', 'string', 'email'],
             'password' => ['required', 'string'],
+            'cf-turnstile-response' => Turnstile::rules(),
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'cf-turnstile-response.required' => 'Verifikasi keamanan (captcha) belum diselesaikan. Coba lagi.',
         ];
     }
 
@@ -43,7 +52,8 @@ class LoginRequest extends FormRequest
         $this->ensureIsNotRateLimited();
 
         if (! Auth::attempt($this->only('email', 'password'), $this->boolean('remember'))) {
-            RateLimiter::hit($this->throttleKey());
+            [, $minutes] = \App\Http\Middleware\DynamicThrottle::resolveLimit('login');
+            RateLimiter::hit($this->throttleKey(), $minutes * 60);
 
             throw ValidationException::withMessages([
                 'email' => trans('auth.failed'),
@@ -60,7 +70,9 @@ class LoginRequest extends FormRequest
      */
     public function ensureIsNotRateLimited(): void
     {
-        if (! RateLimiter::tooManyAttempts($this->throttleKey(), 5)) {
+        [$max] = \App\Http\Middleware\DynamicThrottle::resolveLimit('login');
+
+        if (! RateLimiter::tooManyAttempts($this->throttleKey(), $max)) {
             return;
         }
 

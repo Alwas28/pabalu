@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Rules\Turnstile;
 use App\Services\WhatsApp\WhatsAppVerificationService;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
@@ -37,6 +38,9 @@ class RegisteredUserController extends Controller
             'phone'    => ['required', 'string', 'max:20'],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
             'terms'    => ['required', 'accepted'],
+            'cf-turnstile-response' => Turnstile::rules(),
+        ], [
+            'cf-turnstile-response.required' => 'Verifikasi keamanan (captcha) belum diselesaikan. Coba lagi.',
         ]);
 
         $user = User::create([

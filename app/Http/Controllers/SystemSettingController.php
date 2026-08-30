@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Middleware\DynamicThrottle;
 use App\Models\AppSetting;
 use App\Services\WhatsApp\WhatsAppGatewayManager;
 use Illuminate\Http\RedirectResponse;
@@ -24,22 +25,43 @@ class SystemSettingController extends Controller
         }
     }
 
-    public function edit(): View
+    public function general(): View
     {
         $this->authorizeAdmin();
 
-        $timezone = AppSetting::get('timezone', 'Asia/Makassar');
+        return view('settings.system', [
+            'tab'       => 'general',
+            'timezone'  => AppSetting::get('timezone', 'Asia/Makassar'),
+            'timezones' => self::TIMEZONES,
+        ]);
+    }
+
+    public function whatsapp(): View
+    {
+        $this->authorizeAdmin();
 
         return view('settings.system', [
-            'timezone'   => $timezone,
-            'timezones'  => self::TIMEZONES,
-            'waEnabled'  => WhatsAppGatewayManager::isEnabled(),
-            'waProvider' => AppSetting::get('wa_gateway_provider', 'fonnte'),
-            'waHasKey'   => (bool) AppSetting::get('wa_gateway_api_key'),
-            'waDomain'   => AppSetting::get('wa_gateway_api_domain', ''),
-            'waSender'   => AppSetting::get('wa_gateway_sender_number', ''),
-            'waProviders'=> WhatsAppGatewayManager::PROVIDERS,
+            'tab'         => 'whatsapp',
+            'waEnabled'   => WhatsAppGatewayManager::isEnabled(),
+            'waProvider'  => AppSetting::get('wa_gateway_provider', 'fonnte'),
+            'waHasKey'    => (bool) AppSetting::get('wa_gateway_api_key'),
+            'waDomain'    => AppSetting::get('wa_gateway_api_domain', ''),
+            'waSender'    => AppSetting::get('wa_gateway_sender_number', ''),
+            'waProviders' => WhatsAppGatewayManager::PROVIDERS,
         ]);
+    }
+
+    public function rateLimits(): View
+    {
+        $this->authorizeAdmin();
+
+        $limits = [];
+        foreach (DynamicThrottle::DEFAULTS as $name => $default) {
+            [$max, $minutes] = DynamicThrottle::resolveLimit($name);
+            $limits[$name] = ['max' => $max, 'minutes' => $minutes, 'label' => DynamicThrottle::LABELS[$name]];
+        }
+
+        return view('settings.system', ['tab' => 'rate-limit', 'rateLimits' => $limits]);
     }
 
     public function update(Request $request): RedirectResponse
@@ -106,5 +128,25 @@ class SystemSettingController extends Controller
         );
 
         return back()->with($result['success'] ? 'success' : 'error', $result['message']);
+    }
+
+    public function updateRateLimits(Request $request): RedirectResponse
+    {
+        $this->authorizeAdmin();
+
+        $rules = [];
+        foreach (array_keys(DynamicThrottle::DEFAULTS) as $name) {
+            $rules["{$name}_max"]     = ['required', 'integer', 'min:1', 'max:1000'];
+            $rules["{$name}_minutes"] = ['required', 'integer', 'min:1', 'max:1440'];
+        }
+
+        $data = $request->validate($rules);
+
+        foreach (array_keys(DynamicThrottle::DEFAULTS) as $name) {
+            AppSetting::set("rate_limit_{$name}_max", (string) $data["{$name}_max"]);
+            AppSetting::set("rate_limit_{$name}_minutes", (string) $data["{$name}_minutes"]);
+        }
+
+        return back()->with('success', 'Pengaturan rate limiting berhasil disimpan.');
     }
 }

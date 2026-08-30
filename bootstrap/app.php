@@ -14,7 +14,8 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
-            'require.setup' => \App\Http\Middleware\RequireOwnerSetup::class,
+            'require.setup'   => \App\Http\Middleware\RequireOwnerSetup::class,
+            'dynamic.throttle' => \App\Http\Middleware\DynamicThrottle::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

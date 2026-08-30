@@ -73,6 +73,15 @@
           @endif
         </div>
 
+        @if(config('services.cloudflare.turnstile.site_key'))
+        <div>
+          <div class="cf-turnstile" data-sitekey="{{ config('services.cloudflare.turnstile.site_key') }}"></div>
+          @error('cf-turnstile-response')
+            <p class="f-error"><i class="fa-solid fa-circle-exclamation"></i> {{ $message }}</p>
+          @enderror
+        </div>
+        @endif
+
         <button type="submit" class="auth-submit a-grad">
           <i class="fa-solid fa-right-to-bracket"></i> Masuk
         </button>
@@ -87,5 +96,11 @@
     </div>
   </div>
 </section>
+
+@if(config('services.cloudflare.turnstile.site_key'))
+@push('scripts')
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+@endpush
+@endif
 
 </x-public-layout>

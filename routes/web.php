@@ -113,7 +113,7 @@ Route::get('/produk/kategori/{category}', [\App\Http\Controllers\Public\Category
 Route::get('/menu/{code}', [\App\Http\Controllers\Public\MenuController::class, 'index'])->name('public.menu');
 Route::post('/menu/{code}/order', [\App\Http\Controllers\Public\MenuController::class, 'placeOrder'])->name('public.menu.order');
 Route::get('/menu/{code}/pesanan/{token}', [\App\Http\Controllers\Public\MenuController::class, 'track'])
-    ->middleware('throttle:20,1')
+    ->middleware('dynamic.throttle:public_lookup')
     ->name('public.menu.track');
 
 // ── Public katalog produk Retail (no auth, read-only) ──────────────────────
@@ -515,7 +515,7 @@ $retailRoutes = function () {
 
 // Halaman publik (tanpa login) — cek status pesanan laundry via QR
 Route::get('/cek-pesanan/{token}', [\App\Http\Controllers\Laundry\TrackOrderController::class, 'show'])
-    ->middleware('throttle:20,1')
+    ->middleware('dynamic.throttle:public_lookup')
     ->name('laundry.track');
 
 // Rute utama
@@ -747,10 +747,13 @@ Route::middleware(['auth', 'verified', 'require.setup'])->group(function () use 
     Route::post('langganan/aktifkan/{plan}', [\App\Http\Controllers\ProSubscriptionController::class, 'activate'])->name('pro.subscription.activate');
 
     // Pengaturan Sistem (admin only) — zona waktu aplikasi, gateway WhatsApp (OTP)
-    Route::get('pengaturan-sistem', [\App\Http\Controllers\SystemSettingController::class, 'edit'])->name('system-settings.edit');
+    Route::get('pengaturan-sistem', [\App\Http\Controllers\SystemSettingController::class, 'general'])->name('system-settings.edit');
     Route::put('pengaturan-sistem', [\App\Http\Controllers\SystemSettingController::class, 'update'])->name('system-settings.update');
+    Route::get('pengaturan-sistem/whatsapp', [\App\Http\Controllers\SystemSettingController::class, 'whatsapp'])->name('system-settings.whatsapp');
     Route::put('pengaturan-sistem/whatsapp', [\App\Http\Controllers\SystemSettingController::class, 'updateWhatsapp'])->name('system-settings.whatsapp.update');
     Route::post('pengaturan-sistem/whatsapp/test', [\App\Http\Controllers\SystemSettingController::class, 'testWhatsapp'])->name('system-settings.whatsapp.test');
+    Route::get('pengaturan-sistem/rate-limit', [\App\Http\Controllers\SystemSettingController::class, 'rateLimits'])->name('system-settings.rate-limit');
+    Route::put('pengaturan-sistem/rate-limit', [\App\Http\Controllers\SystemSettingController::class, 'updateRateLimits'])->name('system-settings.rate-limit.update');
 
     // Wilayah Indonesia (admin only)
     Route::prefix('wilayah')->name('wilayah.')->group(function () {

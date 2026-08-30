@@ -133,7 +133,7 @@
               Saya telah membaca dan menyetujui
               <a href="{{ route('pages.show', 'syarat-dan-ketentuan') }}" target="_blank" rel="noopener" style="color:var(--ac);font-weight:600">Syarat &amp; Ketentuan</a>
               serta
-              <a href="#" style="color:var(--ac);font-weight:600" onclick="event.preventDefault()" title="Akan segera tersedia">Kebijakan Privasi</a>
+              <a href="{{ route('pages.show', 'kebijakan-privasi') }}" target="_blank" rel="noopener" style="color:var(--ac);font-weight:600">Kebijakan Privasi</a>
               Pabalu.
             </span>
           </label>
@@ -141,6 +141,15 @@
             <p class="f-error"><i class="fa-solid fa-circle-exclamation"></i> {{ $message }}</p>
           @enderror
         </div>
+
+        @if(config('services.cloudflare.turnstile.site_key'))
+        <div>
+          <div class="cf-turnstile" data-sitekey="{{ config('services.cloudflare.turnstile.site_key') }}"></div>
+          @error('cf-turnstile-response')
+            <p class="f-error"><i class="fa-solid fa-circle-exclamation"></i> {{ $message }}</p>
+          @enderror
+        </div>
+        @endif
 
         <button type="submit" id="btn-submit" class="auth-submit a-grad"
           @if($errors->has('email')) disabled @endif>
@@ -155,7 +164,7 @@
     </div>
 
     <div class="trust-row">
-      <span><i class="fa-solid fa-gift" style="color:var(--ac)"></i> Gratis 14 hari trial</span>
+      <span><i class="fa-solid fa-gift" style="color:var(--ac)"></i> Paket Free selamanya</span>
       <span><i class="fa-solid fa-shield-halved" style="color:var(--ac)"></i> Data aman & terenkripsi</span>
       <span><i class="fa-solid fa-credit-card-slash" style="color:var(--ac)"></i> Tanpa kartu kredit</span>
     </div>
@@ -224,6 +233,9 @@ if (hasEmailError) {
   });
 }
 </script>
+@if(config('services.cloudflare.turnstile.site_key'))
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+@endif
 @endpush
 
 </x-public-layout>

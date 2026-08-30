@@ -16,17 +16,23 @@ Route::middleware('guest')->group(function () {
     Route::get('register', [RegisteredUserController::class, 'create'])
         ->name('register');
 
-    Route::post('register', [RegisteredUserController::class, 'store']);
+    Route::post('register', [RegisteredUserController::class, 'store'])
+        ->middleware('dynamic.throttle:register');
 
     Route::get('login', [AuthenticatedSessionController::class, 'create'])
         ->name('login');
 
-    Route::post('login', [AuthenticatedSessionController::class, 'store']);
+    // Percobaan login gagal per email+IP juga dibatasi di dalam LoginRequest
+    // (App\Http\Requests\Auth\LoginRequest::ensureIsNotRateLimited(), pakai profil
+    // "login" yang sama) — middleware ini lapisan tambahan per-IP.
+    Route::post('login', [AuthenticatedSessionController::class, 'store'])
+        ->middleware('dynamic.throttle:login');
 
     Route::get('forgot-password', [PasswordResetLinkController::class, 'create'])
         ->name('password.request');
 
     Route::post('forgot-password', [PasswordResetLinkController::class, 'store'])
+        ->middleware('dynamic.throttle:otp')
         ->name('password.email');
 
     Route::get('reset-password/{token}', [NewPasswordController::class, 'create'])
@@ -41,21 +47,21 @@ Route::middleware('auth')->group(function () {
         ->name('verification.notice');
 
     Route::post('email/verification-notification', [EmailVerificationNotificationController::class, 'store'])
-        ->middleware('throttle:6,1')
+        ->middleware('dynamic.throttle:otp')
         ->name('verification.send');
 
     Route::post('verify-whatsapp', [WhatsAppVerificationController::class, 'verify'])
-        ->middleware('throttle:10,1')
+        ->middleware('dynamic.throttle:otp')
         ->name('verification.whatsapp.verify');
 
     Route::post('verify-whatsapp/resend', [WhatsAppVerificationController::class, 'resend'])
-        ->middleware('throttle:6,1')
+        ->middleware('dynamic.throttle:otp')
         ->name('verification.whatsapp.resend');
 });
 
 // Verifikasi email bisa diakses tanpa login — auto-login setelah verifikasi
 Route::get('verify-email/{id}/{hash}', VerifyEmailController::class)
-    ->middleware(['signed', 'throttle:6,1'])
+    ->middleware(['signed', 'dynamic.throttle:otp'])
     ->name('verification.verify');
 
 Route::middleware('auth')->group(function () {
