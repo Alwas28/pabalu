@@ -19,7 +19,7 @@ class OutletResource extends JsonResource
             'route_prefix'        => $this->rp(),
             'order_mode'          => $this->order_mode,
             'enable_opening_shift'=> (bool) $this->enable_opening_shift,
-            'requires_opening_stock' => (bool) ($this->outletType?->requires_opening_stock ?? false),
+            'requires_opening_stock' => (bool) $this->requiresOpeningStock(),
             'is_active'           => (bool) $this->is_active,
         ];
     }

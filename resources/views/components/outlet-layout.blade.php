@@ -45,7 +45,7 @@
 @php
   $user       = Auth::user();
   $type       = $outlet->outletType;
-  $hasOpening = $type?->requires_opening_stock ?? false;
+  $hasOpening = $outlet->requiresOpeningStock();
 
   $p       = fn(string $s) => $user->hasPermission($s);
   $role    = $user->role ?? null;

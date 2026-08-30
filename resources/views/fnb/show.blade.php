@@ -1,6 +1,6 @@
 ﻿@php
   $type       = $outlet->outletType;
-  $hasOpening = $type?->requires_opening_stock ?? false;
+  $hasOpening = $outlet->requiresOpeningStock();
   $trackCogs  = $type?->track_cogs ?? false;
   /** @var \App\Models\User $user */
   $p = fn(string $s) => $user->hasPermission($s);

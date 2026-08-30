@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['owner_id', 'outlet_type_id', 'name', 'bidang_usaha', 'code', 'address', 'phone', 'is_active', 'order_mode', 'enable_opening_shift', 'enable_barcode_scanner', 'enable_self_order', 'enable_booking', 'province_id', 'regency_id', 'district_id', 'kelurahan', 'latitude', 'longitude', 'enable_qris_transfer', 'enable_qris_pay', 'enable_transfer', 'enable_card', 'midtrans_server_key', 'midtrans_client_key', 'midtrans_is_production', 'rental_receipt_type'])]
+#[Fillable(['owner_id', 'outlet_type_id', 'name', 'bidang_usaha', 'code', 'address', 'phone', 'is_active', 'order_mode', 'enable_opening_shift', 'enable_barcode_scanner', 'enable_self_order', 'enable_booking', 'requires_opening_stock', 'province_id', 'regency_id', 'district_id', 'kelurahan', 'latitude', 'longitude', 'enable_qris_transfer', 'enable_qris_pay', 'enable_transfer', 'enable_card', 'midtrans_server_key', 'midtrans_client_key', 'midtrans_is_production', 'rental_receipt_type'])]
 class Outlet extends Model
 {
     protected function casts(): array
@@ -19,12 +19,23 @@ class Outlet extends Model
             'enable_barcode_scanner' => 'boolean',
             'enable_self_order'      => 'boolean',
             'enable_booking'         => 'boolean',
+            'requires_opening_stock' => 'boolean',
             'enable_qris_transfer'   => 'boolean',
             'enable_qris_pay'        => 'boolean',
             'enable_transfer'        => 'boolean',
             'enable_card'            => 'boolean',
             'midtrans_is_production' => 'boolean',
         ];
+    }
+
+    // Sumber kebenaran TUNGGAL untuk "apakah outlet ini wajib opening stok" — pakai
+    // ini di MANA PUN, jangan baca $outlet->outletType->requires_opening_stock langsung.
+    // null di kolom outlet = belum di-override owner, ikut default Jenis Outlet;
+    // true/false = override eksplisit per outlet lewat Pengaturan (lihat
+    // Fnb\SettingController, halaman fnb/settings.blade.php).
+    public function requiresOpeningStock(): bool
+    {
+        return $this->requires_opening_stock ?? ($this->outletType?->requires_opening_stock ?? false);
     }
 
     public function documentRequirements(): HasMany
@@ -176,7 +187,7 @@ class Outlet extends Model
     public function isRetailFlow(): bool
     {
         return ($this->outletType?->track_cogs ?? false)
-            && !($this->outletType?->requires_opening_stock ?? true);
+            && !$this->requiresOpeningStock();
     }
 
     // Paket Pro berlaku milik OWNER outlet, bukan user yang sedang login —

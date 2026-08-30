@@ -47,7 +47,7 @@ class PosController extends Controller
 
         $outlet->load(['outletType', 'dailyClosings']);
 
-        $requiresOpening = $outlet->outletType?->requires_opening_stock ?? false;
+        $requiresOpening = $outlet->requiresOpeningStock();
         $openingDone     = !$requiresOpening || $this->isBusinessDayOpen($outlet);
 
         $products = $outlet->products()
@@ -90,7 +90,7 @@ class PosController extends Controller
             ], 422);
         }
 
-        $requiresOpening = $outlet->outletType?->requires_opening_stock ?? false;
+        $requiresOpening = $outlet->requiresOpeningStock();
         if ($requiresOpening) {
             $outlet->load('outletType');
             if (!$this->isBusinessDayOpen($outlet)) {

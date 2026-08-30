@@ -157,6 +157,41 @@
         {{ $outlet->enable_self_order ? 'Aktif' : 'Nonaktif' }}
       </span>
     </div>
+
+    {{-- Opening Stok Toggle (hanya F&B non-retail) --}}
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:20px 0 16px;border-top:1px solid var(--border)">
+      <div style="flex:1;padding-right:24px">
+        <div style="font-size:14px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:8px">
+          <i class="fa-solid fa-clipboard-list" style="color:var(--ac);font-size:13px"></i>
+          Opening Stok Harian
+        </div>
+        <div style="font-size:12.5px;color:var(--muted);margin-top:4px;line-height:1.6">
+          Kasir wajib mencatat <strong>stok awal</strong> setiap hari sebelum bisa transaksi.
+          Jika dinonaktifkan, kasir bisa langsung transaksi tanpa opening stok terlebih dahulu.
+        </div>
+        <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">
+          <span style="font-size:11px;padding:2px 8px;border-radius:99px;background:var(--ac-lt);color:var(--ac);font-weight:600">
+            <i class="fa-solid fa-check" style="margin-right:3px"></i>Stok awal harian
+          </span>
+          <span style="font-size:11px;padding:2px 8px;border-radius:99px;background:var(--ac-lt);color:var(--ac);font-weight:600">
+            <i class="fa-solid fa-check" style="margin-right:3px"></i>Tutup hari otomatis rekap
+          </span>
+        </div>
+      </div>
+      <label style="position:relative;display:inline-block;width:48px;height:26px;flex-shrink:0;cursor:pointer">
+        <input type="checkbox" name="requires_opening_stock" value="1" id="toggle-opening-stock"
+          {{ $outlet->requiresOpeningStock() ? 'checked' : '' }}
+          style="opacity:0;width:0;height:0;position:absolute">
+        <span id="opening-stock-track" style="position:absolute;inset:0;border-radius:99px;transition:background .2s;background:{{ $outlet->requiresOpeningStock() ? 'var(--ac)' : 'var(--border)' }}"></span>
+        <span id="opening-stock-thumb" style="position:absolute;top:3px;left:{{ $outlet->requiresOpeningStock() ? '25px' : '3px' }};width:20px;height:20px;border-radius:50%;background:#fff;transition:left .2s;box-shadow:0 1px 4px rgba(0,0,0,.25)"></span>
+      </label>
+    </div>
+    <div style="padding:0 0 4px;display:flex;align-items:center;gap:6px">
+      <span style="font-size:12px;color:var(--muted)">Status:</span>
+      <span id="opening-stock-status" style="font-size:12px;font-weight:700;color:{{ $outlet->requiresOpeningStock() ? 'var(--ac)' : 'var(--muted)' }}">
+        {{ $outlet->requiresOpeningStock() ? 'Aktif' : 'Nonaktif' }}
+      </span>
+    </div>
     @endif
 
     @if($outlet->isRetailFlow())
@@ -219,7 +254,7 @@
 
     @foreach([
       ['enable_qris_transfer', 'QRIS Transfer', 'fa-qrcode', 'Pelanggan scan QRIS statis milik outlet, kasir input nomor referensi & upload foto bukti bayar.'],
-      ['enable_qris_pay', 'QRIS Pay (Midtrans)', 'fa-bolt', 'Sistem membuat QRIS dinamis via Midtrans. Pembayaran terverifikasi otomatis tanpa input manual.'],
+      ['enable_qris_pay', 'QRIS Pay', 'fa-bolt', 'Sistem membuat QRIS dinamis via Midtrans. Pembayaran terverifikasi otomatis tanpa input manual.'],
       ['enable_transfer', 'Transfer Bank', 'fa-building-columns', 'Pelanggan transfer ke rekening outlet, kasir input nomor referensi & upload foto bukti transfer.'],
       ['enable_card', 'Kartu (EDC)', 'fa-credit-card', 'Pembayaran via mesin EDC, kasir input nomor referensi & upload foto struk EDC.'],
     ] as $i => [$field, $label, $icon, $desc])
@@ -356,6 +391,15 @@ document.getElementById('toggle-self-order')?.addEventListener('change', functio
   if (selfOrderStatusEl) {
     selfOrderStatusEl.textContent = this.checked ? 'Aktif' : 'Nonaktif';
     selfOrderStatusEl.style.color = this.checked ? 'var(--ac)' : 'var(--muted)';
+  }
+});
+
+wireToggle('toggle-opening-stock', 'opening-stock-track', 'opening-stock-thumb');
+const openingStockStatusEl = document.getElementById('opening-stock-status');
+document.getElementById('toggle-opening-stock')?.addEventListener('change', function() {
+  if (openingStockStatusEl) {
+    openingStockStatusEl.textContent = this.checked ? 'Aktif' : 'Nonaktif';
+    openingStockStatusEl.style.color = this.checked ? 'var(--ac)' : 'var(--muted)';
   }
 });
 @endif

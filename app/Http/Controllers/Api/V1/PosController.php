@@ -53,7 +53,7 @@ class PosController extends Controller
             return false;
         }
 
-        return $outlet->outletType?->requires_opening_stock ?? false;
+        return $outlet->requiresOpeningStock();
     }
 
     // Menentukan apakah stok produk dicek & dikurangi saat checkout.
@@ -64,7 +64,7 @@ class PosController extends Controller
         return match ($outlet->rp()) {
             'retail' => true,
             'salon'  => $outlet->outletType?->track_cogs ?? false,
-            default  => $outlet->outletType?->requires_opening_stock ?? false,
+            default  => $outlet->requiresOpeningStock(),
         };
     }
 

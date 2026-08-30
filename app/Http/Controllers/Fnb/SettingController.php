@@ -37,6 +37,7 @@ class SettingController extends Controller
             'enable_opening_shift'    => ['boolean'],
             'enable_barcode_scanner'  => ['boolean'],
             'enable_self_order'       => ['boolean'],
+            'requires_opening_stock'  => ['boolean'],
             'enable_qris_transfer'    => ['boolean'],
             'enable_qris_pay'         => ['boolean'],
             'enable_transfer'         => ['boolean'],
@@ -55,7 +56,7 @@ class SettingController extends Controller
             return back()->withErrors(['midtrans_server_key' => 'Server Key Midtrans wajib diisi untuk mengaktifkan QRIS Pay.'])->withInput();
         }
 
-        $outlet->update([
+        $updateData = [
             'order_mode'              => $validated['order_mode'],
             'enable_opening_shift'    => $request->boolean('enable_opening_shift'),
             'enable_barcode_scanner'  => $request->boolean('enable_barcode_scanner'),
@@ -67,7 +68,17 @@ class SettingController extends Controller
             'midtrans_server_key'     => $request->filled('midtrans_server_key') ? ($validated['midtrans_server_key'] ?? null) : $outlet->midtrans_server_key,
             'midtrans_client_key'     => $request->filled('midtrans_client_key') ? ($validated['midtrans_client_key'] ?? null) : $outlet->midtrans_client_key,
             'midtrans_is_production'  => $request->boolean('midtrans_is_production'),
-        ]);
+        ];
+
+        // Toggle opening stok cuma ditampilkan/relevan untuk outlet yang bukan alur
+        // retail (lihat @if(!$isRetail) di fnb/settings.blade.php) — kalau outlet ini
+        // isRetailFlow(), field-nya tidak dikirim form sama sekali, jangan diam-diam
+        // di-set false (mempertahankan null/inherit dari Jenis Outlet apa adanya).
+        if (!$outlet->isRetailFlow()) {
+            $updateData['requires_opening_stock'] = $request->boolean('requires_opening_stock');
+        }
+
+        $outlet->update($updateData);
 
         return back()->with('success', 'Pengaturan outlet berhasil disimpan.');
     }

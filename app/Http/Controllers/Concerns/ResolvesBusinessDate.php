@@ -38,7 +38,7 @@ trait ResolvesBusinessDate
      */
     private function resolveBusinessDay(Outlet $outlet): array
     {
-        $requiresOpening = $outlet->outletType?->requires_opening_stock ?? false;
+        $requiresOpening = $outlet->requiresOpeningStock();
 
         if (!$requiresOpening) {
             return ['date' => today()->toDateString(), 'open' => true];

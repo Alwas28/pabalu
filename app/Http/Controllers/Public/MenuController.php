@@ -52,7 +52,7 @@ class MenuController extends Controller
             return view('public.menu.unavailable', compact('outlet'));
         }
 
-        $requiresOpening  = $outlet->outletType?->requires_opening_stock ?? false;
+        $requiresOpening  = $outlet->requiresOpeningStock();
         $openingDone      = !$requiresOpening || $this->isOpeningDone($outlet);
         $selfOrderEnabled = (bool) $outlet->enable_self_order;
 
@@ -96,7 +96,7 @@ class MenuController extends Controller
             return response()->json(['message' => 'Fitur pemesanan mandiri dinonaktifkan oleh outlet.'], 403);
         }
 
-        $requiresOpening = $outlet->outletType?->requires_opening_stock ?? false;
+        $requiresOpening = $outlet->requiresOpeningStock();
 
         if ($requiresOpening && !$this->isOpeningDone($outlet)) {
             return response()->json([

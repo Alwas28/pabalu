@@ -41,7 +41,7 @@ class OpeningStockController extends Controller
 
         $outlet->load('outletType');
 
-        if (!($outlet->outletType?->requires_opening_stock ?? false)) {
+        if (!($outlet->requiresOpeningStock())) {
             abort(404);
         }
 
@@ -83,7 +83,7 @@ class OpeningStockController extends Controller
         $user = $this->authorizeOutlet($outlet);
         $outlet->load('outletType');
 
-        if (!($outlet->outletType?->requires_opening_stock ?? false)) {
+        if (!($outlet->requiresOpeningStock())) {
             abort(404);
         }
 
@@ -110,7 +110,7 @@ class OpeningStockController extends Controller
             abort(403);
         }
 
-        if (!($outlet->outletType?->requires_opening_stock ?? false)) {
+        if (!($outlet->requiresOpeningStock())) {
             abort(404);
         }
 
