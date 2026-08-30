@@ -1,7 +1,12 @@
 @php
   $fabUser = Auth::user();
   $fabRole = $fabUser?->role;
-  $showFab = $fabRole === 'owner';
+  // Disembunyikan khusus di halaman POS/Kasir (semua modul: fnb.pos.index,
+  // retail.pos.index, salon.pos.index, laundry.pos.index) — posisinya
+  // (bottom:28px;right:28px) bertabrakan dengan tombol keranjang/bayar POS
+  // (bottom:24px;right:24px), jadi tombol bayar ketutupan. Tetap tampil di
+  // halaman lain (dashboard, laporan, dst).
+  $showFab = $fabRole === 'owner' && !request()->routeIs('*.pos.index');
 @endphp
 
 @if($showFab)
