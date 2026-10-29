@@ -388,12 +388,7 @@
   </div>
 </footer>
 
-<!-- WHATSAPP FLOATING BUTTON -->
-<a href="https://wa.me/6281234567890?text=Halo%20Admin%20Pabalu%2C%20saya%20ingin%20bertanya%20mengenai%20produk%20%2F%20pesanan%20saya." target="_blank" rel="noopener" class="wa-float">
-  <span class="wa-pulse"></span>
-  <span class="wa-icon">💬</span>
-  <span class="wa-text">Chat Admin</span>
-</a>
+{{-- Tombol WhatsApp "Chat Admin" dipindah ke tab di dalam chatbot-widget (lihat bawah). --}}
 
 <script>
 
@@ -408,5 +403,6 @@
   function closeDrawer(){ drawer.classList.remove('open'); overlay.classList.remove('open'); }
 </script>
 @stack('scripts')
+<x-chatbot-widget admin-wa="https://wa.me/6281234567890?text=Halo%20Admin%20Pabalu%2C%20saya%20ingin%20bertanya%20mengenai%20produk%20%2F%20pesanan%20saya." />
 </body>
 </html>

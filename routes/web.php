@@ -513,6 +513,13 @@ $retailRoutes = function () {
     Route::delete('{outlet}/self-orders/{order}',       [\App\Http\Controllers\SelfOrderController::class, 'destroy'])->name('self-orders.destroy');
 };
 
+// Asisten Pabalu (widget chat) — tamu & user login; isi jawaban dibedakan di ChatbotService
+Route::post('/chatbot/message', [\App\Http\Controllers\ChatbotController::class, 'send'])
+    ->middleware('dynamic.throttle:chatbot')
+    ->name('chatbot.send');
+Route::get('/chatbot/history', [\App\Http\Controllers\ChatbotController::class, 'history'])->name('chatbot.history');
+Route::post('/chatbot/reset', [\App\Http\Controllers\ChatbotController::class, 'reset'])->name('chatbot.reset');
+
 // Halaman publik (tanpa login) — cek status pesanan laundry via QR
 Route::get('/cek-pesanan/{token}', [\App\Http\Controllers\Laundry\TrackOrderController::class, 'show'])
     ->middleware('dynamic.throttle:public_lookup')

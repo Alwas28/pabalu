@@ -12,8 +12,10 @@
 @if($showFab)
 @php $fabOwnerId = $fabUser->id; @endphp
 
-{{-- ── Floating Action Button ── --}}
-<div id="fab-wrapper" style="position:fixed;bottom:28px;right:28px;z-index:1200;display:flex;flex-direction:column;align-items:flex-end;gap:10px">
+{{-- ── Floating Action Button ──
+     Disembunyikan: tombol tunggal sekarang milik chatbot-widget (tab "Chat Admin" memanggil
+     fabOpen()). Elemen tetap ada karena updateBadge() masih menulis ke badge/bubble ini. --}}
+<div id="fab-wrapper" style="display:none;position:fixed;bottom:28px;right:28px;z-index:1200;flex-direction:column;align-items:flex-end;gap:10px">
 
   {{-- Bubble chat unread --}}
   <div id="fab-unread-bubble"
@@ -61,6 +63,12 @@
       <div style="font-size:14px;font-weight:700;color:var(--text)">Administrator</div>
       <div style="font-size:11.5px;color:var(--muted)">Chat &amp; laporan sistem</div>
     </div>
+    <button onclick="fabClose();if(window.pbcOpen)pbcOpen()" title="Kembali ke Asisten Pabalu"
+      style="background:none;border:1px solid var(--border);cursor:pointer;color:var(--muted);
+      padding:5px 10px;border-radius:8px;font-size:11.5px;font-weight:600;font-family:inherit;transition:color .15s"
+      onmouseenter="this.style.color='var(--text)'" onmouseleave="this.style.color='var(--muted)'">
+      <i class="fa-solid fa-robot" style="margin-right:4px"></i>Asisten
+    </button>
     <button onclick="fabClose()" style="background:none;border:none;cursor:pointer;color:var(--muted);
       padding:6px;border-radius:8px;font-size:18px;line-height:1;transition:color .15s"
       onmouseenter="this.style.color='var(--text)'" onmouseleave="this.style.color='var(--muted)'">
@@ -319,6 +327,8 @@
     var badge  = document.getElementById('fab-badge');
     var chatBadge = document.getElementById('fab-chat-badge');
     var bubble = document.getElementById('fab-unread-bubble');
+    // Teruskan ke tombol chatbot-widget, yang menggantikan tombol FAB ini.
+    document.dispatchEvent(new CustomEvent('pabalu:admin-unread', { detail: n }));
     if (n > 0) {
       badge.textContent = n;
       badge.style.display = 'flex';

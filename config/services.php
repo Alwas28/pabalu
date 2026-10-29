@@ -35,6 +35,12 @@ return [
         ],
     ],
 
+    'anthropic' => [
+        'key'           => env('ANTHROPIC_API_KEY'),
+        // Haiku 5.5 = model Claude termurah; cukup untuk chatbot panduan.
+        'chatbot_model' => env('CHATBOT_MODEL', 'claude-haiku-5-5'),
+    ],
+
     'cloudflare' => [
         'turnstile' => [
             'site_key'   => env('TURNSTILE_SITE_KEY'),

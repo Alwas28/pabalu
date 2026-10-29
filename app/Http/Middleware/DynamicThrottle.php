@@ -22,6 +22,7 @@ class DynamicThrottle
         'register'      => ['max' => 10, 'minutes' => 1],
         'otp'           => ['max' => 6,  'minutes' => 1],
         'public_lookup' => ['max' => 20, 'minutes' => 1],
+        'chatbot'       => ['max' => 10, 'minutes' => 1],
     ];
 
     public const LABELS = [
@@ -29,6 +30,7 @@ class DynamicThrottle
         'register'      => 'Registrasi Akun Baru',
         'otp'           => 'Verifikasi / Kirim Ulang OTP',
         'public_lookup' => 'Lacak Pesanan Publik (tanpa login)',
+        'chatbot'       => 'Asisten Pabalu (pesan chatbot)',
     ];
 
     public function handle(Request $request, Closure $next, string $name): Response

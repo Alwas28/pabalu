@@ -981,6 +981,7 @@ renderSwatches();
 </script>
 
 <x-system-report-fab />
+<x-chatbot-widget />
 @stack('scripts')
 
 </body>
