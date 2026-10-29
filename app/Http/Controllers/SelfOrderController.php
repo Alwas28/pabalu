@@ -22,6 +22,23 @@ class SelfOrderController extends Controller
         return $user;
     }
 
+    // Self-order nonaktif bukan pelanggaran akses, jadi tampilkan halaman info di layout
+    // outlet (bukan halaman 403 polos) — owner diberi jalan pintas ke Pengaturan.
+    private function selfOrderDisabled(Outlet $outlet, User $user): View
+    {
+        return view('self-orders.disabled', [
+            'outlet'      => $outlet,
+            'settingsUrl' => $user->role === 'owner' ? $outlet->route('settings.edit') : null,
+        ]);
+    }
+
+    private function redirectIfSelfOrderDisabled(Outlet $outlet): ?RedirectResponse
+    {
+        return $outlet->enable_self_order
+            ? null
+            : redirect()->route($outlet->rp() . '.self-orders.index', $outlet);
+    }
+
     private function guardSelfOrder(Outlet $outlet, Order $order): void
     {
         if ($order->outlet_id != $outlet->id) abort(404);
@@ -31,8 +48,8 @@ class SelfOrderController extends Controller
     /** Inbox — daftar self-order yang menunggu review staff */
     public function index(Outlet $outlet): View
     {
-        $this->authorizeOutlet($outlet);
-        if (!$outlet->enable_self_order) abort(403, 'Fitur self-order tidak aktif untuk outlet ini.');
+        $user = $this->authorizeOutlet($outlet);
+        if (!$outlet->enable_self_order) return $this->selfOrderDisabled($outlet, $user);
 
         $pending = Order::where('outlet_id', $outlet->id)
             ->whereNull('user_id')
@@ -66,7 +83,7 @@ class SelfOrderController extends Controller
     public function show(Outlet $outlet, Order $order): View|RedirectResponse
     {
         $user = $this->authorizeOutlet($outlet);
-        if (!$outlet->enable_self_order) abort(403, 'Fitur self-order tidak aktif untuk outlet ini.');
+        if (!$outlet->enable_self_order) return $this->selfOrderDisabled($outlet, $user);
         $this->guardSelfOrder($outlet, $order);
 
         if ($order->status !== 'pending') {
@@ -90,7 +107,7 @@ class SelfOrderController extends Controller
     public function approve(Request $request, Outlet $outlet, Order $order): RedirectResponse
     {
         $user = $this->authorizeOutlet($outlet);
-        if (!$outlet->enable_self_order) abort(403, 'Fitur self-order tidak aktif untuk outlet ini.');
+        if ($redirect = $this->redirectIfSelfOrderDisabled($outlet)) return $redirect;
         $this->guardSelfOrder($outlet, $order);
 
         if ($order->status !== 'pending') {
@@ -165,7 +182,7 @@ class SelfOrderController extends Controller
     public function reject(Outlet $outlet, Order $order): RedirectResponse
     {
         $this->authorizeOutlet($outlet);
-        if (!$outlet->enable_self_order) abort(403, 'Fitur self-order tidak aktif untuk outlet ini.');
+        if ($redirect = $this->redirectIfSelfOrderDisabled($outlet)) return $redirect;
         $this->guardSelfOrder($outlet, $order);
 
         if ($order->status !== 'pending') {
@@ -181,7 +198,7 @@ class SelfOrderController extends Controller
     public function destroy(Outlet $outlet, Order $order): RedirectResponse
     {
         $user = $this->authorizeOutlet($outlet);
-        if (!$outlet->enable_self_order) abort(403, 'Fitur self-order tidak aktif untuk outlet ini.');
+        if ($redirect = $this->redirectIfSelfOrderDisabled($outlet)) return $redirect;
         $this->guardSelfOrder($outlet, $order);
 
         if ($user->role !== 'owner') abort(403);
