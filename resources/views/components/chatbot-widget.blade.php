@@ -18,6 +18,9 @@
   $pbcGreeting = $pbcLoggedIn
     ? 'Halo! Saya Asisten Pabalu. Tanyakan cara memakai fitur apa saja — misalnya menambah kasir, mengatur stok, atau membaca laporan.'
     : 'Halo! Saya Asisten Pabalu. Saya bisa menjelaskan apa itu Pabalu, kelebihannya, dan cara mulai memakainya.';
+  $pbcTeaser = $pbcLoggedIn
+    ? 'Ada yang bisa saya bantu? Tanyakan cara memakai fitur Pabalu di sini.'
+    : 'Baru di Pabalu? Tanyakan apa saja seputar aplikasi ini, saya siap bantu.';
 @endphp
 
 @if($pbcShow)
@@ -50,8 +53,29 @@
 .pbc-msg{max-width:85%;padding:9px 12px;border-radius:12px;font-size:13px;line-height:1.5;word-wrap:break-word}
 .pbc-bot{background:#fff;border:1px solid #e5e7eb;align-self:flex-start;border-bottom-left-radius:4px}
 .pbc-user{background:var(--pbc-ac);color:#fff;align-self:flex-end;border-bottom-right-radius:4px}
-.pbc-typing{color:#6b7280;font-style:italic}
+.pbc-avatar{width:28px;height:28px;border-radius:50%;object-fit:cover;flex-shrink:0;background:#fff;border:1px solid #e5e7eb}
+.pbc-row{display:flex;gap:8px;align-items:flex-end;align-self:flex-start;max-width:90%}
+.pbc-row .pbc-msg{max-width:none}
+.pbc-in{animation:pbcIn .28s ease-out}
+@keyframes pbcIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.pbc-dots{display:inline-flex;gap:4px;padding:4px 2px}
+.pbc-dots i{width:7px;height:7px;border-radius:50%;background:#9ca3af;animation:pbcDot 1.2s infinite ease-in-out}
+.pbc-dots i:nth-child(2){animation-delay:.15s}
+.pbc-dots i:nth-child(3){animation-delay:.3s}
+@keyframes pbcDot{0%,60%,100%{transform:translateY(0);opacity:.45}30%{transform:translateY(-5px);opacity:1}}
+.pbc-head .pbc-avatar{width:36px;height:36px;border:2px solid rgba(255,255,255,.7)}
+.pbc-online{font-size:11px;opacity:.85}
+.pbc-online.pbc-busy{font-style:italic}
+#pbc-btn .pbc-btn-avatar{width:100%;height:100%;border-radius:50%;object-fit:cover;border:3px solid var(--pbc-ac);background:#fff}
 .pbc-sep{align-self:center;font-size:10.5px;color:#9ca3af}
+#pbc-teaser{position:fixed;right:24px;bottom:90px;z-index:1190;width:250px;max-width:calc(100vw - 32px);display:none;
+  background:#fff;color:#1f2937;border-radius:14px 14px 4px 14px;box-shadow:0 8px 28px rgba(0,0,0,.22);
+  padding:12px 30px 12px 12px;font-size:13px;line-height:1.5;cursor:pointer;gap:10px;align-items:flex-start}
+#pbc-teaser.pbc-show{display:flex;animation:pbcIn .3s ease-out}
+#pbc-teaser strong{display:block;font-size:12.5px;margin-bottom:2px}
+#pbc-teaser-close{position:absolute;top:6px;right:6px;border:none;background:none;color:#9ca3af;cursor:pointer;
+  font-size:16px;line-height:1;padding:2px 4px}
+#pbc-teaser-close:hover{color:#4b5563}
 #pbc-chips{display:flex;flex-wrap:wrap;gap:6px;padding:0 14px 10px;background:#f8fafc}
 #pbc-chips button{border:1px solid #d1d5db;background:#fff;color:#374151;border-radius:99px;padding:5px 10px;
   font-size:11.5px;cursor:pointer;font-family:inherit}
@@ -63,21 +87,28 @@
 #pbc-send{border:none;background:var(--pbc-ac);color:#fff;border-radius:10px;padding:0 14px;cursor:pointer}
 #pbc-send:disabled{opacity:.5;cursor:default}
 .pbc-note{font-size:10.5px;color:#9ca3af;text-align:center;padding:0 10px 8px;background:#fff}
-@media (max-width:480px){#pbc-btn{right:16px}#pbc-panel{right:16px}#pbc-bubble{right:16px}}
+@media (max-width:480px){#pbc-btn{right:16px}#pbc-panel{right:16px}#pbc-bubble{right:16px}#pbc-teaser{right:16px}}
 </style>
 
 <div id="pbc-root"
      data-send="{{ route('chatbot.send') }}"
      data-reset="{{ route('chatbot.reset') }}"
      @if($pbcLoggedIn) data-history="{{ route('chatbot.history') }}" @endif
-     data-csrf="{{ csrf_token() }}">
+     data-csrf="{{ csrf_token() }}"
+     data-avatar="{{ asset('img/avatar-asisten.png') }}">
 
   <button id="pbc-btn" type="button" aria-label="Buka Asisten Pabalu" title="Asisten Pabalu">
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M8 9h8M8 13h5"/>
-    </svg>
+    <img class="pbc-btn-avatar" src="{{ asset('img/avatar-asisten.png') }}" alt="">
     @if($pbcAdminChat)<span class="pbc-badge" id="pbc-btn-badge">0</span>@endif
+    <span class="pbc-badge" id="pbc-new-badge">1</span>
   </button>
+
+  {{-- Sapaan otomatis untuk pengunjung baru (lihat initTeaser di bawah). --}}
+  <div id="pbc-teaser" role="button" tabindex="0" aria-label="Buka Asisten Pabalu">
+    <img class="pbc-avatar" src="{{ asset('img/avatar-asisten.png') }}" alt="">
+    <div id="pbc-teaser-body"><span class="pbc-dots" aria-hidden="true"><i></i><i></i><i></i></span></div>
+    <button type="button" id="pbc-teaser-close" aria-label="Tutup sapaan">&times;</button>
+  </div>
 
   @if($pbcAdminChat)
   <button id="pbc-bubble" type="button">Pesan baru dari Admin</button>
@@ -85,9 +116,10 @@
 
   <div id="pbc-panel" role="dialog" aria-label="Asisten Pabalu">
     <div class="pbc-head">
+      <img class="pbc-avatar" src="{{ asset('img/avatar-asisten.png') }}" alt="">
       <div>
         <strong>Asisten Pabalu</strong>
-        <span>{{ $pbcLoggedIn ? 'Panduan penggunaan aplikasi' : 'Tanya seputar Pabalu' }}</span>
+        <span class="pbc-online" id="pbc-status">{{ $pbcLoggedIn ? 'Panduan penggunaan aplikasi' : 'Tanya seputar Pabalu' }}</span>
       </div>
       @php $pbcResetLabel = $pbcLoggedIn ? 'Hapus riwayat chat' : 'Mulai percakapan baru'; @endphp
       <button type="button" id="pbc-reset" title="{{ $pbcResetLabel }}" aria-label="{{ $pbcResetLabel }}">
@@ -145,18 +177,59 @@
     return esc.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
   }
 
-  function add(text, who) {
+  // Pesan bot diberi avatar di sampingnya; animate = muncul dengan efek geser-pudar.
+  function add(text, who, animate) {
     var el = document.createElement('div');
     el.className = 'pbc-msg ' + (who === 'user' ? 'pbc-user' : 'pbc-bot');
     if (who === 'user') { el.textContent = text; } else { el.innerHTML = render(text); }
-    log.appendChild(el);
+    var node = el;
+    if (who !== 'user') {
+      node = document.createElement('div');
+      node.className = 'pbc-row';
+      var img = document.createElement('img');
+      img.className = 'pbc-avatar';
+      img.src = root.dataset.avatar;
+      img.alt = '';
+      node.appendChild(img);
+      node.appendChild(el);
+    }
+    if (animate) node.classList.add('pbc-in');
+    log.appendChild(node);
     log.scrollTop = log.scrollHeight;
     return el;
   }
 
+  var statusEl = document.getElementById('pbc-status');
+  var statusText = statusEl.textContent;
+  function setTyping(on) {
+    statusEl.textContent = on ? 'sedang mengetik…' : statusText;
+    statusEl.classList.toggle('pbc-busy', on);
+  }
+
+  // Balasan "diketik" bertahap (maks ±1,5 detik berapa pun panjangnya), lalu baru
+  // diganti HTML final (tebal/baris baru) supaya tag tidak tampil setengah jadi.
+  function typeOut(el, text, done) {
+    var step = Math.max(1, Math.ceil(text.length / 90));
+    var i = 0;
+    (function tick() {
+      i += step;
+      if (i >= text.length) {
+        el.innerHTML = render(text);
+        log.scrollTop = log.scrollHeight;
+        return done();
+      }
+      el.textContent = text.slice(0, i);
+      log.scrollTop = log.scrollHeight;
+      setTimeout(tick, 16);
+    })();
+  }
+
+  var MIN_TYPING_MS = 3000;
+  function wait(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+
   function start() {
     log.innerHTML = '';
-    add(greeting, 'bot');
+    add(greeting, 'bot', true);
     chips.style.display = '';
   }
 
@@ -183,12 +256,15 @@
     if (!question || busy) return;
     busy = true; send.disabled = true;
     chips.style.display = 'none';
-    add(question, 'user');
+    add(question, 'user', true);
     input.value = '';
-    var typing = add('Mengetik…', 'bot');
-    typing.classList.add('pbc-typing');
+    var typing = add('', 'bot', true);
+    typing.innerHTML = '<span class="pbc-dots" aria-label="Sedang mengetik"><i></i><i></i><i></i></span>';
+    setTyping(true);
+    // Indikator mengetik tampil minimal 3 detik walau API menjawab lebih cepat.
+    var minDelay = wait(MIN_TYPING_MS);
 
-    fetch(root.dataset.send, {
+    var request = fetch(root.dataset.send, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -205,17 +281,68 @@
           return data.message || 'Maaf, terjadi gangguan. Coba lagi nanti.';
         });
       })
-      .catch(function () { return 'Tidak dapat terhubung. Periksa koneksi internet Anda.'; })
-      .then(function (reply) {
-        typing.classList.remove('pbc-typing');
-        typing.innerHTML = render(reply);
-        log.scrollTop = log.scrollHeight;
+      .catch(function () { return 'Tidak dapat terhubung. Periksa koneksi internet Anda.'; });
+
+    Promise.all([request, minDelay]).then(function (results) {
+      setTyping(false);
+      typeOut(typing, results[0] || '', function () {
         busy = false; send.disabled = false;
         input.focus();
       });
+    });
   }
 
+  // ── Sapaan otomatis ──
+  // Muncul hanya di kunjungan awal (maks TEASER_MAX_VISITS sesi browser) dan berhenti
+  // selamanya begitu chatbot pernah dibuka atau sapaannya ditutup. Disimpan di
+  // localStorage (per browser); kalau storage diblokir, sapaan tidak ditampilkan.
+  var TEASER_MAX_VISITS = 2;
+  var teaser    = document.getElementById('pbc-teaser');
+  var newBadge  = document.getElementById('pbc-new-badge');
+  var teaserMsg = @json($pbcTeaser);
+
+  function storeGet(key) { try { return localStorage.getItem(key); } catch (e) { return null; } }
+  function storeSet(key, val) { try { localStorage.setItem(key, val); } catch (e) {} }
+
+  function hideTeaser(remember) {
+    teaser.classList.remove('pbc-show');
+    newBadge.style.display = 'none';
+    if (remember) storeSet('pbc_teaser_done', '1');
+  }
+
+  function initTeaser() {
+    try {
+      if (storeGet('pbc_teaser_done')) return;
+      // Hitung kunjungan sekali per sesi browser, bukan per halaman.
+      var visits = parseInt(storeGet('pbc_visits') || '0', 10);
+      if (!sessionStorage.getItem('pbc_counted')) {
+        visits += 1;
+        storeSet('pbc_visits', String(visits));
+        sessionStorage.setItem('pbc_counted', '1');
+      }
+      if (visits > TEASER_MAX_VISITS) return;
+    } catch (e) { return; }
+
+    setTimeout(function () {
+      // Jangan bertumpuk dengan panel yang sudah terbuka atau notifikasi pesan admin.
+      if (panel.classList.contains('pbc-open')) return;
+      if (bubble && bubble.style.display === 'block') return;
+      newBadge.style.display = 'inline-flex';
+      teaser.classList.add('pbc-show');
+      setTimeout(function () {
+        document.getElementById('pbc-teaser-body').innerHTML =
+          '<strong>Halo! 👋</strong>' + render(teaserMsg);
+      }, 1500);
+    }, 2500);
+  }
+
+  teaser.addEventListener('click', function (e) {
+    if (e.target.id === 'pbc-teaser-close') { hideTeaser(true); return; }
+    openPanel();
+  });
+
   function openPanel() {
+    hideTeaser(true);
     panel.classList.add('pbc-open');
     if (!log.children.length) { start(); loadHistory(); }
     input.focus();
@@ -259,6 +386,7 @@
     if (e.target.dataset.q) ask(e.target.dataset.q);
   });
   form.addEventListener('submit', function (e) { e.preventDefault(); ask(input.value); });
+  initTeaser();
   input.addEventListener('keydown', function (e) {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); ask(input.value); }
   });
